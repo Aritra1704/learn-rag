@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# ChromaDB persistent index (generated at runtime by step6_persistent.py)
+chroma_db/
+
+# Test cache
+.pytest_cache/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code (keep launch.json, ignore user-specific settings)
+.vscode/*
+!.vscode/launch.json
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
