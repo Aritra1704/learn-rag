@@ -1,0 +1,637 @@
+<meta charset="UTF-8">
+<title>Text to Vector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F5F4;
+    --ink: #14201D;
+    --ink-soft: #4B5D58;
+    --ink-faint: #7C8B86;
+    --accent: #0E7C66;
+    --accent-soft: #DCEAE6;
+    --line: #C7D1CD;
+    --card-bg: #FDFEFD;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513;
+      --ink: #E8EFEC;
+      --ink-soft: #9FB3AD;
+      --ink-faint: #6C8079;
+      --accent: #3FD8B0;
+      --accent-soft: #16332B;
+      --line: #2A3934;
+      --card-bg: #161D1A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101513;
+    --ink: #E8EFEC;
+    --ink-soft: #9FB3AD;
+    --ink-faint: #6C8079;
+    --accent: #3FD8B0;
+    --accent-soft: #16332B;
+    --line: #2A3934;
+    --card-bg: #161D1A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in {
+      animation: rise 0.6s ease-out both;
+    }
+    .fade-in.d2 { animation-delay: 0.08s; }
+    .fade-in.d3 { animation-delay: 0.16s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .intro {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 62ch;
+  }
+
+  .intro code, p code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-intro {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin-bottom: 1.25rem;
+  }
+
+  figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 1rem 0.5rem;
+  }
+
+  .diagram-scroll svg {
+    display: block;
+    height: auto;
+  }
+
+  #fig-overview { width: 100%; min-width: 640px; }
+  #fig-pipeline { width: 100%; min-width: 1100px; }
+  #fig-trace { width: 100%; min-width: 640px; }
+  #fig-slice { width: 100%; min-width: 700px; }
+
+  figcaption {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  figcaption strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* SVG text styling */
+  .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
+  .dg-node-bg { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .dg-cell-bg { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+  .dg-line { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; }
+  .dg-accent-line { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .dg-icon { stroke: var(--ink-soft); stroke-width: 1.3; fill: none; stroke-linecap: round; }
+  .dg-eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.09em; fill: var(--ink-faint); font-weight: 600; }
+  .dg-eyebrow-accent { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.09em; fill: var(--accent); font-weight: 600; }
+  .dg-label { font-family: var(--font-mono); font-size: 13.5px; fill: var(--ink); font-weight: 600; }
+  .dg-sub { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-soft); }
+  .dg-quote { font-family: var(--font-sans); font-style: italic; font-size: 11.5px; fill: var(--ink); }
+  .dg-num { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); font-variant-numeric: tabular-nums; text-anchor: middle; }
+  .dg-ellipsis { font-family: var(--font-mono); font-size: 12px; fill: var(--ink-faint); text-anchor: middle; }
+  .dg-arrow-label { font-family: var(--font-mono); font-size: 11px; fill: var(--accent); text-anchor: middle; font-weight: 500; }
+  .dg-code-ref { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-faint); text-anchor: middle; }
+  .dg-ref-pill { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; }
+  .dg-ref-text { font-family: var(--font-mono); font-size: 10px; fill: var(--accent); font-weight: 600; text-anchor: middle; }
+  .dg-op { font-family: var(--font-mono); font-size: 11.5px; fill: var(--ink); }
+  .dg-result { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .dg-idx { font-family: var(--font-mono); font-size: 9px; fill: var(--ink-faint); text-anchor: middle; }
+  .dg-spine { stroke: var(--line); stroke-width: 2; }
+  .dg-node { fill: var(--card-bg); stroke: var(--accent); stroke-width: 2; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 1.1rem 1.4rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  .callout .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+
+  footer .next {
+    font-family: var(--font-mono);
+    color: var(--ink-soft);
+  }
+</style>
+
+<div class="page">
+
+  <header class="fade-in">
+    <span class="eyebrow">Step 1 of 9 · RAG Learning Guide</span>
+    <h1>Text to Vector</h1>
+    <p class="intro">
+      <code>step1_embeddings.py</code> turns three sentences into three 768-number vectors
+      by calling Ollama directly over raw HTTP. Below is the actual data from a real run —
+      first the whole trip end‑to‑end, then the mechanism inside <code>get_embedding()</code> broken open.
+    </p>
+  </header>
+
+  <section class="fade-in d2">
+    <h2>The whole trip</h2>
+    <p class="section-intro">
+      Three unrelated‑looking sentences go in. Each comes back as an independent vector of
+      the same length — the numbers differ, the shape never does.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-overview" viewBox="0 0 940 460" role="img"
+             aria-label="Three sentences flow into get_embedding, which calls Ollama, producing three 768-number vectors of the same length but different values.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+            <marker id="arrow-accent" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <!-- converging arrows: cards -> node -->
+          <line class="dg-line" x1="200" y1="80"  x2="386" y2="228" marker-end="url(#arrow)" />
+          <line class="dg-line" x1="200" y1="230" x2="386" y2="230" marker-end="url(#arrow)" />
+          <line class="dg-line" x1="200" y1="380" x2="386" y2="232" marker-end="url(#arrow)" />
+
+          <!-- diverging arrows: node -> tables -->
+          <line class="dg-accent-line" x1="594" y1="228" x2="646" y2="80"  marker-end="url(#arrow-accent)" />
+          <line class="dg-accent-line" x1="594" y1="230" x2="646" y2="230" marker-end="url(#arrow-accent)" />
+          <line class="dg-accent-line" x1="594" y1="232" x2="646" y2="380" marker-end="url(#arrow-accent)" />
+
+          <!-- Card 1 -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="30" width="180" height="100" rx="10" />
+            <rect x="34" y="44" width="16" height="20" rx="2" fill="none" stroke="var(--ink-faint)" stroke-width="1.2" />
+            <line class="dg-icon" x1="38" y1="50" x2="46" y2="50" />
+            <line class="dg-icon" x1="38" y1="55" x2="46" y2="55" />
+            <line class="dg-icon" x1="38" y1="60" x2="43" y2="60" />
+            <text class="dg-eyebrow" x="58" y="52">SENTENCE 1</text>
+            <text class="dg-quote" x="34" y="82">"The cat sat on</text>
+            <text class="dg-quote" x="34" y="98">the mat."</text>
+            <text class="dg-sub" x="34" y="118">shares 0 words with #2</text>
+          </g>
+
+          <!-- Card 2 -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="180" width="180" height="100" rx="10" />
+            <rect x="34" y="194" width="16" height="20" rx="2" fill="none" stroke="var(--ink-faint)" stroke-width="1.2" />
+            <line class="dg-icon" x1="38" y1="200" x2="46" y2="200" />
+            <line class="dg-icon" x1="38" y1="205" x2="46" y2="205" />
+            <line class="dg-icon" x1="38" y1="210" x2="43" y2="210" />
+            <text class="dg-eyebrow" x="58" y="202">SENTENCE 2</text>
+            <text class="dg-quote" x="34" y="232">"A feline rested</text>
+            <text class="dg-quote" x="34" y="248">on the rug."</text>
+            <text class="dg-sub" x="34" y="268">same meaning as #1</text>
+          </g>
+
+          <!-- Card 3 -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="330" width="180" height="100" rx="10" />
+            <rect x="34" y="344" width="16" height="20" rx="2" fill="none" stroke="var(--ink-faint)" stroke-width="1.2" />
+            <line class="dg-icon" x1="38" y1="350" x2="46" y2="350" />
+            <line class="dg-icon" x1="38" y1="355" x2="46" y2="355" />
+            <line class="dg-icon" x1="38" y1="360" x2="43" y2="360" />
+            <text class="dg-eyebrow" x="58" y="352">SENTENCE 3</text>
+            <text class="dg-quote" x="34" y="382">"The stock market</text>
+            <text class="dg-quote" x="34" y="398">crashed today."</text>
+            <text class="dg-sub" x="34" y="418">unrelated to #1 &amp; #2</text>
+          </g>
+
+          <!-- Process node -->
+          <g>
+            <rect class="dg-node-bg" x="390" y="160" width="200" height="140" rx="14" />
+            <circle cx="454" cy="192" r="4" fill="var(--accent)" />
+            <circle cx="474" cy="182" r="4" fill="var(--accent)" />
+            <circle cx="474" cy="202" r="4" fill="var(--accent)" />
+            <circle cx="494" cy="192" r="4" fill="var(--accent)" />
+            <line class="dg-icon" x1="454" y1="192" x2="474" y2="182" stroke="var(--accent)" />
+            <line class="dg-icon" x1="454" y1="192" x2="474" y2="202" stroke="var(--accent)" />
+            <line class="dg-icon" x1="474" y1="182" x2="494" y2="192" stroke="var(--accent)" />
+            <line class="dg-icon" x1="474" y1="202" x2="494" y2="192" stroke="var(--accent)" />
+            <text class="dg-eyebrow-accent" text-anchor="middle" x="490" y="228">PROCESS</text>
+            <text class="dg-label" text-anchor="middle" x="490" y="250">get_embedding()</text>
+            <text class="dg-sub" text-anchor="middle" x="490" y="270">Ollama · nomic-embed-text</text>
+          </g>
+
+          <!-- Output table 1 -->
+          <g>
+            <rect class="dg-card-bg" x="646" y="30" width="230" height="100" rx="10" />
+            <text class="dg-eyebrow" x="660" y="50">OUTPUT VECTOR · dim 768</text>
+            <g transform="translate(660,60)">
+              <rect class="dg-cell-bg" x="0"   y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="34"  y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="68"  y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="102" y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="136" y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="170" y="0" width="31" height="24" />
+              <text class="dg-num" x="15.5"  y="16">1.083</text>
+              <text class="dg-num" x="49.5"  y="16">1.335</text>
+              <text class="dg-num" x="83.5"  y="16">-2.52</text>
+              <text class="dg-num" x="117.5" y="16">-0.51</text>
+              <text class="dg-num" x="151.5" y="16">1.113</text>
+              <text class="dg-ellipsis" x="185.5" y="16">…</text>
+            </g>
+            <text class="dg-sub" x="660" y="112">763 more values, same sentence</text>
+          </g>
+
+          <!-- Output table 2 -->
+          <g>
+            <rect class="dg-card-bg" x="646" y="180" width="230" height="100" rx="10" />
+            <text class="dg-eyebrow" x="660" y="200">OUTPUT VECTOR · dim 768</text>
+            <g transform="translate(660,210)">
+              <rect class="dg-cell-bg" x="0"   y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="34"  y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="68"  y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="102" y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="136" y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="170" y="0" width="31" height="24" />
+              <text class="dg-num" x="15.5"  y="16">1.194</text>
+              <text class="dg-num" x="49.5"  y="16">0.957</text>
+              <text class="dg-num" x="83.5"  y="16">-3.14</text>
+              <text class="dg-num" x="117.5" y="16">-1.87</text>
+              <text class="dg-num" x="151.5" y="16">0.703</text>
+              <text class="dg-ellipsis" x="185.5" y="16">…</text>
+            </g>
+            <text class="dg-sub" x="660" y="262">close range to #1 — no shared words</text>
+          </g>
+
+          <!-- Output table 3 -->
+          <g>
+            <rect class="dg-card-bg" x="646" y="330" width="230" height="100" rx="10" />
+            <text class="dg-eyebrow" x="660" y="350">OUTPUT VECTOR · dim 768</text>
+            <g transform="translate(660,360)">
+              <rect class="dg-cell-bg" x="0"   y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="34"  y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="68"  y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="102" y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="136" y="0" width="31" height="24" />
+              <rect class="dg-cell-bg" x="170" y="0" width="31" height="24" />
+              <text class="dg-num" x="15.5"  y="16">0.809</text>
+              <text class="dg-num" x="49.5"  y="16">0.619</text>
+              <text class="dg-num" x="83.5"  y="16">-3.84</text>
+              <text class="dg-num" x="117.5" y="16">0.209</text>
+              <text class="dg-num" x="151.5" y="16">1.956</text>
+              <text class="dg-ellipsis" x="185.5" y="16">…</text>
+            </g>
+            <text class="dg-sub" x="660" y="412">wider spread — unrelated topic</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> real output from running <code>step1_embeddings.py</code> against a local Ollama
+        server. Every sentence, regardless of length or topic, comes back as exactly 768 floats — only the
+        <em>values</em> encode meaning.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>What happens inside get_embedding()</h2>
+    <p class="section-intro">
+      The node above is a black box on purpose — here's what it's actually doing, traced against the
+      real line numbers in <code>step1_embeddings.py</code>.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-pipeline" viewBox="0 0 1400 260" role="img"
+             aria-label="Pipeline: text string is JSON-encoded into bytes, POSTed to Ollama's embeddings endpoint, the server runs nomic-embed-text, and the JSON response is parsed back into a 768-float list.">
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+
+          <!-- arrows -->
+          <line class="dg-line" x1="160" y1="130" x2="270" y2="130" marker-end="url(#arrow2)" />
+          <line class="dg-line" x1="430" y1="130" x2="540" y2="130" marker-end="url(#arrow2)" />
+          <line class="dg-line" x1="760" y1="130" x2="870" y2="130" marker-end="url(#arrow2)" />
+          <line class="dg-line" x1="1090" y1="130" x2="1200" y2="130" marker-end="url(#arrow2)" />
+
+          <text class="dg-arrow-label" x="215"  y="112">json.dumps().encode()</text>
+          <text class="dg-code-ref"    x="215"  y="150">L18–20</text>
+
+          <text class="dg-arrow-label" x="485"  y="112">POST /api/embeddings</text>
+          <text class="dg-code-ref"    x="485"  y="150">L21–26</text>
+
+          <text class="dg-arrow-label" x="815"  y="112">urlopen(timeout=30)</text>
+          <text class="dg-code-ref"    x="815"  y="150">L27</text>
+
+          <text class="dg-arrow-label" x="1145" y="112">json.loads()["embedding"]</text>
+          <text class="dg-code-ref"    x="1145" y="150">L28–29</text>
+
+          <!-- Box 1: input -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="90" width="140" height="80" rx="10" />
+            <text class="dg-eyebrow" x="34" y="112">INPUT</text>
+            <text class="dg-label" x="34" y="134">text (str)</text>
+            <text class="dg-sub" x="34" y="154">"...cat sat..."</text>
+          </g>
+
+          <!-- Box 2: payload -->
+          <g>
+            <rect class="dg-card-bg" x="270" y="90" width="160" height="80" rx="10" />
+            <text class="dg-eyebrow" x="284" y="112">PAYLOAD</text>
+            <text class="dg-label" x="284" y="134">bytes</text>
+            <text class="dg-sub" x="284" y="154">{"model", "prompt"}</text>
+          </g>
+
+          <!-- Box 3: process (Ollama) -->
+          <g>
+            <rect class="dg-node-bg" x="540" y="75" width="220" height="110" rx="14" />
+            <text class="dg-eyebrow-accent" x="554" y="99">PROCESS</text>
+            <text class="dg-label" x="554" y="123">Ollama server</text>
+            <text class="dg-sub" x="554" y="143">nomic-embed-text:latest</text>
+            <text class="dg-sub" x="554" y="161">localhost:11434</text>
+          </g>
+
+          <!-- Box 4: response -->
+          <g>
+            <rect class="dg-card-bg" x="870" y="90" width="220" height="80" rx="10" />
+            <text class="dg-eyebrow" x="884" y="112">RESPONSE</text>
+            <text class="dg-label" x="884" y="134">JSON</text>
+            <text class="dg-sub" x="884" y="154">{"embedding": [768 floats]}</text>
+          </g>
+
+          <!-- Box 5: output -->
+          <g>
+            <rect class="dg-card-bg" x="1200" y="90" width="180" height="80" rx="10" stroke="var(--accent)" stroke-width="2" />
+            <text class="dg-eyebrow-accent" x="1214" y="112">OUTPUT</text>
+            <text class="dg-label" x="1214" y="134">list[float]</text>
+            <text class="dg-sub" x="1214" y="154">len = 768</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> no <code>try/except</code> anywhere in this chain. If Ollama isn't running,
+        or the response has no <code>"embedding"</code> key, this crashes loudly with a traceback — deliberate,
+        since a silently missing vector would corrupt every calculation downstream.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>One sentence, traced end-to-end</h2>
+    <p class="section-intro">
+      Same run, single example — <code>"The cat sat on the mat."</code> — followed line by line from
+      the literal in the source down to the terminal output you actually saw.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-trace" viewBox="0 0 900 1070" role="img"
+             aria-label="Eight-step trace of one sentence through step1_embeddings.py, from the string literal through the HTTP call to Ollama and back to the printed vector length and first five values.">
+          <defs>
+            <marker id="arrow3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--line)" />
+            </marker>
+          </defs>
+
+          <line class="dg-spine" x1="40" y1="70" x2="40" y2="980" marker-end="url(#arrow3)" />
+
+          <!-- Row 1 : L34 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="70" r="7" />
+            <rect class="dg-card-bg" x="70" y="20" width="780" height="100" rx="10" />
+            <rect class="dg-ref-pill" x="84" y="26" width="60" height="18" rx="9" />
+            <text class="dg-ref-text" x="114" y="39">L34</text>
+            <text class="dg-op" x="160" y="52">sentence = "The cat sat on the mat."</text>
+            <text class="dg-result" x="160" y="76">→ a plain Python str, 24 characters</text>
+          </g>
+
+          <!-- Row 2 : L43 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="200" r="7" />
+            <rect class="dg-card-bg" x="70" y="150" width="780" height="100" rx="10" />
+            <rect class="dg-ref-pill" x="84" y="156" width="60" height="18" rx="9" />
+            <text class="dg-ref-text" x="114" y="169">L43</text>
+            <text class="dg-op" x="160" y="182">vec = get_embedding(sentence)</text>
+            <text class="dg-result" x="160" y="206">→ enters the function with text = "The cat sat on the mat."</text>
+          </g>
+
+          <!-- Row 3 : L18-20 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="330" r="7" />
+            <rect class="dg-card-bg" x="70" y="280" width="780" height="100" rx="10" />
+            <rect class="dg-ref-pill" x="84" y="286" width="70" height="18" rx="9" />
+            <text class="dg-ref-text" x="119" y="299">L18–20</text>
+            <text class="dg-op" x="160" y="312">payload = json.dumps({"model": EMBED_MODEL, "prompt": text}).encode()</text>
+            <text class="dg-result" x="160" y="336">→ b'{"model": "nomic-embed-text:latest", "prompt": "The cat sat on the mat."}'</text>
+          </g>
+
+          <!-- Row 4 : L21-27 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="460" r="7" />
+            <rect class="dg-card-bg" x="70" y="410" width="780" height="100" rx="10" />
+            <rect class="dg-ref-pill" x="84" y="416" width="70" height="18" rx="9" />
+            <text class="dg-ref-text" x="119" y="429">L21–27</text>
+            <text class="dg-op" x="160" y="442">Request(POST, Content-Type: application/json) → urlopen(req, timeout=30)</text>
+            <text class="dg-result" x="160" y="466">→ sent to Ollama @ localhost:11434/api/embeddings — model nomic-embed-text:latest</text>
+          </g>
+
+          <!-- Row 5 : L28 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="590" r="7" />
+            <rect class="dg-card-bg" x="70" y="540" width="780" height="100" rx="10" />
+            <rect class="dg-ref-pill" x="84" y="546" width="60" height="18" rx="9" />
+            <text class="dg-ref-text" x="114" y="559">L28</text>
+            <text class="dg-op" x="160" y="572">data = json.loads(resp.read())</text>
+            <text class="dg-result" x="160" y="596">→ {"embedding": [1.08316, 1.33525, -2.5216, -0.51468, 1.11294, … 763 more]}</text>
+            <text class="dg-idx" x="160" y="616" text-anchor="start">rounded to 5 decimals here for space — full precision is preserved in memory</text>
+          </g>
+
+          <!-- Row 6 : L29 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="720" r="7" />
+            <rect class="dg-card-bg" x="70" y="670" width="780" height="100" rx="10" />
+            <rect class="dg-ref-pill" x="84" y="676" width="60" height="18" rx="9" />
+            <text class="dg-ref-text" x="114" y="689">L29</text>
+            <text class="dg-op" x="160" y="702">return data["embedding"]</text>
+            <text class="dg-result" x="160" y="726">→ vec, a list[float] of length 768, handed back to the caller at L43</text>
+          </g>
+
+          <!-- Row 7 : L47 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="850" r="7" />
+            <rect class="dg-card-bg" x="70" y="800" width="780" height="100" rx="10" />
+            <rect class="dg-ref-pill" x="84" y="806" width="60" height="18" rx="9" />
+            <text class="dg-ref-text" x="114" y="819">L47</text>
+            <text class="dg-op" x="160" y="832">print(f"Vector length : {len(vec)}")</text>
+            <text class="dg-result" x="160" y="856">→ Vector length : 768</text>
+          </g>
+
+          <!-- Row 8 : L48 -->
+          <g>
+            <circle class="dg-node" cx="40" cy="980" r="7" fill="var(--accent)" />
+            <rect x="70" y="930" width="780" height="100" rx="10" class="dg-node-bg" />
+            <rect class="dg-ref-pill" x="84" y="936" width="60" height="18" rx="9" />
+            <text class="dg-ref-text" x="114" y="949">L48</text>
+            <text class="dg-op" x="160" y="962">print(f"First 5 values: {vec[:5]}")</text>
+            <text class="dg-result" x="160" y="986" fill="var(--accent)" font-weight="600">→ the slice that produces exactly those 5 numbers — see Fig. 4</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 3 —</strong> every value shown is real, from the same run as Fig. 1 — nothing here is
+        a placeholder. The gap between L28 and L48 is the whole point of the next figure: 768 numbers come
+        back, but the terminal only ever shows you 5 of them.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>Where exactly do the "first 5 values" come from?</h2>
+    <p class="section-intro">
+      <code>vec</code> is a 768-element list. <code>vec[:5]</code> is a plain Python slice — index 0 up
+      to (not including) index 5. Nothing is computed or rounded for the printout; it's the first five
+      raw floats, in the order Ollama returned them.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-slice" viewBox="0 0 900 270" role="img"
+             aria-label="The 768-element vector with its first five cells bracketed as vec of 0 to 5, arrowing down to the exact printed output: First 5 values, 1.0831600427627563, 1.3352491855621338, -2.521602153778076, -0.5146785974502563, 1.1129412651062012.">
+          <text class="dg-eyebrow" x="40" y="24">VEC — 768 FLOATS, RETURNED AT L29</text>
+
+          <rect class="dg-node-bg" x="40" y="34" width="30" height="34" rx="4" />
+          <rect class="dg-node-bg" x="72" y="34" width="30" height="34" rx="4" />
+          <rect class="dg-node-bg" x="104" y="34" width="30" height="34" rx="4" />
+          <rect class="dg-node-bg" x="136" y="34" width="30" height="34" rx="4" />
+          <rect class="dg-node-bg" x="168" y="34" width="30" height="34" rx="4" />
+          <text class="dg-idx" x="55"  y="30">0</text>
+          <text class="dg-idx" x="87"  y="30">1</text>
+          <text class="dg-idx" x="119" y="30">2</text>
+          <text class="dg-idx" x="151" y="30">3</text>
+          <text class="dg-idx" x="183" y="30">4</text>
+
+          <rect class="dg-cell-bg" x="206" y="34" width="654" height="34" rx="4" />
+          <text class="dg-sub" x="533" y="55" text-anchor="middle">… indices 5 through 767 — 763 more values, never printed</text>
+
+          <path class="dg-line" d="M40,86 L40,96 L198,96 L198,86" fill="none" />
+          <text class="dg-arrow-label" x="119" y="112">vec[:5]  —  take index 0 up to 5</text>
+
+          <line class="dg-line" x1="119" y1="120" x2="119" y2="150" marker-end="url(#arrow3)" />
+
+          <rect x="40" y="158" width="820" height="90" rx="8" fill="#0B0F0E" stroke="var(--line)" />
+          <text x="58" y="184" font-family="var(--font-mono)" font-size="9.5px" fill="#6C8079" xml:space="preserve">&gt;&gt;&gt; print(f"First 5 values: {vec[:5]}")</text>
+          <text x="58" y="210" font-family="var(--font-mono)" font-size="9.5px" fill="#CFEFE3" font-weight="600" font-variant-numeric="tabular-nums" xml:space="preserve">First 5 values: [1.0831600427627563, 1.3352491855621338, -2.521602153778076,</text>
+          <text x="58" y="228" font-family="var(--font-mono)" font-size="9.5px" fill="#CFEFE3" font-weight="600" font-variant-numeric="tabular-nums" xml:space="preserve">-0.5146785974502563, 1.1129412651062012]</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 4 —</strong> this is the exact terminal output from your run. Full precision, not
+        rounded — Python prints floats at whatever precision they carry from Ollama's response.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="callout fade-in d3">
+    <span class="eyebrow">Worth noticing, not yet proving</span>
+    Sentence 1 and 2 share zero words but sit in a similar numeric range across all five sample values;
+    sentence 3 drifts further, especially in dimensions 3 and 5. That's a hint, not a measurement — five
+    numbers out of 768 can't tell you "similar" or "different" on their own. Turning that hint into one
+    comparable score is exactly what <strong>Step 2 — Cosine Similarity</strong> does next.
+  </section>
+
+  <footer>
+    <span>step1_embeddings.py · run against local Ollama, nomic-embed-text:latest</span>
+    <span class="next">Next → Step 2: Cosine Similarity</span>
+  </footer>
+
+</div>
