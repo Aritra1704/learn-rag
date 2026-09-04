@@ -1,0 +1,439 @@
+<meta charset="UTF-8">
+<title>Vectors to a Score</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F5F4;
+    --ink: #14201D;
+    --ink-soft: #4B5D58;
+    --ink-faint: #7C8B86;
+    --accent: #0E7C66;
+    --accent-soft: #DCEAE6;
+    --line: #C7D1CD;
+    --card-bg: #FDFEFD;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513;
+      --ink: #E8EFEC;
+      --ink-soft: #9FB3AD;
+      --ink-faint: #6C8079;
+      --accent: #3FD8B0;
+      --accent-soft: #16332B;
+      --line: #2A3934;
+      --card-bg: #161D1A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101513;
+    --ink: #E8EFEC;
+    --ink-soft: #9FB3AD;
+    --ink-faint: #6C8079;
+    --accent: #3FD8B0;
+    --accent-soft: #16332B;
+    --line: #2A3934;
+    --card-bg: #161D1A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in { animation: rise 0.6s ease-out both; }
+    .fade-in.d2 { animation-delay: 0.08s; }
+    .fade-in.d3 { animation-delay: 0.16s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  header { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .intro {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 62ch;
+  }
+
+  .intro code, p code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-intro {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin-bottom: 1.25rem;
+  }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 1rem 0.5rem;
+  }
+
+  .diagram-scroll svg { display: block; height: auto; }
+
+  #fig-fanout   { width: 100%; min-width: 640px; }
+  #fig-terminal { width: 100%; min-width: 620px; }
+  #fig-mech     { width: 100%; min-width: 1080px; }
+
+  figcaption { font-size: 0.88rem; line-height: 1.55; color: var(--ink-soft); }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* SVG shared styles */
+  .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
+  .dg-node-bg { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .dg-dead    { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dg-line    { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; }
+  .dg-accent-line { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .dg-dashed  { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; stroke-dasharray: 4 4; }
+  .dg-eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.09em; fill: var(--ink-faint); font-weight: 600; }
+  .dg-eyebrow-accent { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.09em; fill: var(--accent); font-weight: 600; }
+  .dg-label   { font-family: var(--font-mono); font-size: 13.5px; fill: var(--ink); font-weight: 600; }
+  .dg-sub     { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-soft); }
+  .dg-quote   { font-family: var(--font-sans); font-style: italic; font-size: 11.5px; fill: var(--ink); }
+  .dg-num     { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); font-variant-numeric: tabular-nums; text-anchor: middle; }
+  .dg-score   { font-family: var(--font-mono); font-size: 20px; font-weight: 700; fill: var(--accent); font-variant-numeric: tabular-nums; }
+  .dg-arrow-label { font-family: var(--font-mono); font-size: 11px; fill: var(--accent); text-anchor: middle; font-weight: 500; }
+  .dg-code-ref { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-faint); text-anchor: middle; }
+  .dg-op      { font-family: var(--font-mono); font-size: 11.5px; fill: var(--ink); }
+  .dg-result  { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 1.1rem 1.4rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .callout .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  footer .next { font-family: var(--font-mono); color: var(--ink-soft); }
+  footer .prev { font-family: var(--font-mono); color: var(--ink-faint); }
+</style>
+
+<div class="page">
+
+  <header class="fade-in">
+    <span class="eyebrow">Step 2 of 9 · RAG Learning Guide</span>
+    <h1>Vectors to a Score</h1>
+    <p class="intro">
+      <code>step2_similarity.py</code> takes the vectors Step 1 produced and turns a pair of them into
+      one number between -1 and 1 — built entirely with <code>math</code>, no numpy. This scoring function
+      is what every later retrieval step, ChromaDB included, is built on top of.
+    </p>
+  </header>
+
+  <section class="fade-in d2">
+    <h2>Embed once, compare four times</h2>
+    <p class="section-intro">
+      One query, four candidates — two written to score <strong>HIGH</strong> (same meaning as the query),
+      two to score <strong>LOW</strong> (unrelated). The query is embedded a single time at L59 and reused
+      for every comparison — embedding is the expensive network call, so it's never re-fetched.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-fanout" viewBox="0 0 900 640" role="img"
+             aria-label="Query vector computed once and reused across four comparisons: each candidate is embedded, compared against the query vector with cosine_similarity, and produces a raw score — 0.6897 for the cat sentence, 0.6287 for the feline synonym, 0.3835 for the stock market sentence, 0.3209 for the pizza sentence.">
+          <defs>
+            <marker id="arrowA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+            <marker id="arrowB" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <!-- query box -->
+          <rect class="dg-node-bg" x="380" y="18" width="240" height="72" rx="12" />
+          <text class="dg-eyebrow-accent" x="398" y="38">QUERY · EMBEDDED ONCE — L59</text>
+          <text class="dg-label" x="398" y="58">"What did the cat do?"</text>
+          <text class="dg-sub" x="398" y="76">query_vec reused below ↓</text>
+
+          <!-- dashed spine tapping into each node -->
+          <line class="dg-dashed" x1="500" y1="90" x2="500" y2="515" />
+          <circle cx="500" cy="125" r="3" fill="var(--accent)" />
+          <circle cx="500" cy="255" r="3" fill="var(--accent)" />
+          <circle cx="500" cy="385" r="3" fill="var(--accent)" />
+          <circle cx="500" cy="515" r="3" fill="var(--accent)" />
+
+          <!-- Row 1 -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="80" width="220" height="90" rx="10" />
+            <text class="dg-eyebrow" x="34" y="100">CANDIDATE 1</text>
+            <text class="dg-quote" x="34" y="122">"The cat sat on</text>
+            <text class="dg-quote" x="34" y="138">the mat."</text>
+            <text class="dg-sub" x="34" y="158">expected HIGH</text>
+            <line class="dg-line" x1="240" y1="125" x2="378" y2="125" marker-end="url(#arrowA)" />
+            <rect class="dg-card-bg" x="380" y="80" width="240" height="90" rx="10" />
+            <text class="dg-eyebrow" x="398" y="100">COMPARE</text>
+            <text class="dg-label" x="398" y="122">cosine_similarity()</text>
+            <text class="dg-sub" x="398" y="142">query_vec, candidate_vec</text>
+            <line class="dg-accent-line" x1="620" y1="125" x2="698" y2="125" marker-end="url(#arrowB)" />
+            <rect class="dg-card-bg" x="700" y="80" width="180" height="90" rx="10" stroke="var(--accent)" />
+            <text class="dg-eyebrow-accent" x="716" y="100">SCORE</text>
+            <text class="dg-score" x="716" y="140">0.6897</text>
+          </g>
+
+          <!-- Row 2 -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="210" width="220" height="90" rx="10" />
+            <text class="dg-eyebrow" x="34" y="230">CANDIDATE 2</text>
+            <text class="dg-quote" x="34" y="252">"A feline rested</text>
+            <text class="dg-quote" x="34" y="268">on the rug."</text>
+            <text class="dg-sub" x="34" y="288">expected HIGH (synonym)</text>
+            <line class="dg-line" x1="240" y1="255" x2="378" y2="255" marker-end="url(#arrowA)" />
+            <rect class="dg-card-bg" x="380" y="210" width="240" height="90" rx="10" />
+            <text class="dg-eyebrow" x="398" y="230">COMPARE</text>
+            <text class="dg-label" x="398" y="252">cosine_similarity()</text>
+            <text class="dg-sub" x="398" y="272">query_vec, candidate_vec</text>
+            <line class="dg-accent-line" x1="620" y1="255" x2="698" y2="255" marker-end="url(#arrowB)" />
+            <rect class="dg-card-bg" x="700" y="210" width="180" height="90" rx="10" stroke="var(--accent)" />
+            <text class="dg-eyebrow-accent" x="716" y="230">SCORE</text>
+            <text class="dg-score" x="716" y="270">0.6287</text>
+          </g>
+
+          <!-- Row 3 -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="340" width="220" height="90" rx="10" />
+            <text class="dg-eyebrow" x="34" y="360">CANDIDATE 3</text>
+            <text class="dg-quote" x="34" y="382">"The stock market</text>
+            <text class="dg-quote" x="34" y="398">crashed today."</text>
+            <text class="dg-sub" x="34" y="418">expected LOW</text>
+            <line class="dg-line" x1="240" y1="385" x2="378" y2="385" marker-end="url(#arrowA)" />
+            <rect class="dg-card-bg" x="380" y="340" width="240" height="90" rx="10" />
+            <text class="dg-eyebrow" x="398" y="360">COMPARE</text>
+            <text class="dg-label" x="398" y="382">cosine_similarity()</text>
+            <text class="dg-sub" x="398" y="402">query_vec, candidate_vec</text>
+            <line class="dg-accent-line" x1="620" y1="385" x2="698" y2="385" marker-end="url(#arrowB)" />
+            <rect class="dg-card-bg" x="700" y="340" width="180" height="90" rx="10" stroke="var(--accent)" />
+            <text class="dg-eyebrow-accent" x="716" y="360">SCORE</text>
+            <text class="dg-score" x="716" y="400">0.3835</text>
+          </g>
+
+          <!-- Row 4 -->
+          <g>
+            <rect class="dg-card-bg" x="20" y="470" width="220" height="90" rx="10" />
+            <text class="dg-eyebrow" x="34" y="490">CANDIDATE 4</text>
+            <text class="dg-quote" x="34" y="512">"I love eating</text>
+            <text class="dg-quote" x="34" y="528">pizza on Fridays."</text>
+            <text class="dg-sub" x="34" y="548">expected LOW</text>
+            <line class="dg-line" x1="240" y1="515" x2="378" y2="515" marker-end="url(#arrowA)" />
+            <rect class="dg-card-bg" x="380" y="470" width="240" height="90" rx="10" />
+            <text class="dg-eyebrow" x="398" y="490">COMPARE</text>
+            <text class="dg-label" x="398" y="512">cosine_similarity()</text>
+            <text class="dg-sub" x="398" y="532">query_vec, candidate_vec</text>
+            <line class="dg-accent-line" x1="620" y1="515" x2="698" y2="515" marker-end="url(#arrowB)" />
+            <rect class="dg-card-bg" x="700" y="470" width="180" height="90" rx="10" stroke="var(--accent)" />
+            <text class="dg-eyebrow-accent" x="716" y="490">SCORE</text>
+            <text class="dg-score" x="716" y="530">0.3209</text>
+          </g>
+
+          <text class="dg-sub" x="20" y="600">4 separate calls to cosine_similarity() — same query_vec, different candidate_vec each time.</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> real scores from a live run. Note the order already reads HIGH → HIGH → LOW → LOW
+        before any sorting happens — this candidate list was deliberately designed that way; it won't always
+        line up this cleanly, which is exactly why the next step sorts explicitly instead of trusting list order.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d2">
+    <h2>The four numbers become a ranking</h2>
+    <p class="section-intro">
+      <code>results.sort(reverse=True)</code> sorts the <code>(score, text)</code> tuples by score, descending —
+      Python compares tuples element-by-element, so putting the score <em>first</em> in the tuple is what makes
+      this work with zero extra code. This is the actual terminal output from the run above.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-terminal" viewBox="0 0 900 250" role="img"
+             aria-label="Terminal output: sorted results with proportional hash-mark bars — 0.6897 the cat sat on the mat, 0.6287 a feline rested on the rug, 0.3835 the stock market crashed today, 0.3209 I love eating pizza on Fridays.">
+          <rect x="40" y="20" width="820" height="210" rx="8" fill="#0B0F0E" stroke="var(--line)" />
+          <g font-family="var(--font-mono)" font-size="11px" font-variant-numeric="tabular-nums">
+            <text x="58" y="46"  fill="#6C8079">&gt;&gt;&gt; for score, text in results: print(f"{score:.4f}  {bar}"); print(text)</text>
+            <text x="58" y="76"  fill="#CFEFE3" font-weight="600">0.6897  ###########################</text>
+            <text x="76" y="94"  fill="#8FA69E">'The cat sat on the mat.'</text>
+            <text x="58" y="122" fill="#CFEFE3" font-weight="600">0.6287  #########################</text>
+            <text x="76" y="140" fill="#8FA69E">'A feline rested on the rug.'</text>
+            <text x="58" y="168" fill="#CFEFE3" font-weight="600">0.3835  ###############</text>
+            <text x="76" y="186" fill="#8FA69E">'The stock market crashed today.'</text>
+            <text x="58" y="214" fill="#CFEFE3" font-weight="600">0.3209  ############</text>
+            <text x="76" y="230" fill="#8FA69E">'I love eating pizza on Fridays.'</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> exact output from this run. Bar length is <code>int(score * 40)</code> — a
+        cheap way to make relative magnitude visible without comparing four decimals by eye.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>What happens inside cosine_similarity()</h2>
+    <p class="section-intro">
+      Traced for one real pair — the query against candidate 1 — with the exact intermediate numbers
+      Python computes but never prints.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-mech" viewBox="0 0 1220 400" role="img"
+             aria-label="Mechanism: vectors a and b feed a dot product of 339.4547, magnitudes of 22.801 and 21.585 are computed, a zero-magnitude guard branches to a dead end that almost never fires, and the main path divides to produce the final score 0.6897.">
+          <defs>
+            <marker id="arrowC" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+            <marker id="arrowD" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <!-- main spine arrows -->
+          <line class="dg-line" x1="200" y1="170" x2="260" y2="170" marker-end="url(#arrowC)" />
+          <line class="dg-line" x1="460" y1="170" x2="520" y2="170" marker-end="url(#arrowC)" />
+          <line class="dg-line" x1="740" y1="170" x2="760" y2="170" marker-end="url(#arrowC)" />
+          <line class="dg-accent-line" x1="900" y1="170" x2="950" y2="170" marker-end="url(#arrowD)" />
+          <line class="dg-dashed" x1="830" y1="220" x2="830" y2="280" marker-end="url(#arrowC)" />
+
+          <text class="dg-arrow-label" x="230" y="152">L39</text>
+          <text class="dg-arrow-label" x="490" y="152">L40–41</text>
+          <text class="dg-arrow-label" x="925" y="152">L44</text>
+          <text class="dg-code-ref" x="855" y="255">L42–43 · yes</text>
+          <text class="dg-code-ref" x="830" y="140">no →</text>
+
+          <!-- Box 1: inputs -->
+          <rect class="dg-card-bg" x="20" y="125" width="180" height="90" rx="10" />
+          <text class="dg-eyebrow" x="34" y="147">INPUT</text>
+          <text class="dg-label" x="34" y="169">a, b</text>
+          <text class="dg-sub" x="34" y="189">two 768-float vectors</text>
+
+          <!-- Box 2: dot product -->
+          <rect class="dg-card-bg" x="260" y="125" width="200" height="90" rx="10" />
+          <text class="dg-eyebrow" x="274" y="147">DOT PRODUCT</text>
+          <text class="dg-op" x="274" y="169">Σ (x·y) for each dim</text>
+          <text class="dg-result" x="274" y="189">dot = 339.4547</text>
+
+          <!-- Box 3: magnitudes -->
+          <rect class="dg-card-bg" x="520" y="110" width="220" height="120" rx="10" />
+          <text class="dg-eyebrow" x="534" y="132">MAGNITUDE</text>
+          <text class="dg-op" x="534" y="154">sqrt(Σ x²) for each vector</text>
+          <text class="dg-result" x="534" y="176">mag_a = 22.801</text>
+          <text class="dg-result" x="534" y="194">mag_b = 21.585</text>
+
+          <!-- Diamond guard -->
+          <polygon points="760,170 830,120 900,170 830,220" fill="var(--card-bg)" stroke="var(--ink-faint)" stroke-width="1.5" />
+          <text class="dg-code-ref" x="830" y="167" text-anchor="middle">mag_a==0</text>
+          <text class="dg-code-ref" x="830" y="179" text-anchor="middle">or mag_b==0?</text>
+
+          <!-- Dead end -->
+          <rect class="dg-dead" x="740" y="280" width="180" height="60" rx="8" />
+          <text class="dg-code-ref" x="830" y="305" text-anchor="middle">return 0.0</text>
+          <text class="dg-code-ref" x="830" y="322" text-anchor="middle">only defensive check in the file</text>
+
+          <!-- Box 4: output -->
+          <rect class="dg-node-bg" x="950" y="125" width="230" height="90" rx="10" />
+          <text class="dg-eyebrow-accent" x="964" y="147">OUTPUT</text>
+          <text class="dg-op" x="964" y="169">dot / (mag_a · mag_b)</text>
+          <text class="dg-score" x="964" y="197">0.6897</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 3 —</strong> the diamond is the only <code>if</code> in this entire file — and it guards a
+        mathematical impossibility (division by zero), not a business rule. With real Ollama output it never
+        takes the dashed path.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="callout fade-in d3">
+    <span class="eyebrow">Worth noticing, not yet proving</span>
+    <code>zip(a, b)</code> at L39 silently stops at the <em>shorter</em> of the two vectors if their
+    lengths ever differ — no error, just a quietly wrong score. That never happens here because the same
+    model produces both vectors, but it's the kind of bug that produces a plausible number instead of a
+    crash. Next problem: comparing a query against every candidate by hand, one at a time, is <em>O(n)</em> —
+    fine for 4 candidates, unusable for a real document store. <strong>Step 3 — ChromaDB</strong> replaces
+    this loop with a real index.
+  </section>
+
+  <footer>
+    <span class="prev">← Step 1: Text to Vector</span>
+    <span>step2_similarity.py · run against local Ollama, nomic-embed-text:latest</span>
+    <span class="next">Next → Step 3: ChromaDB</span>
+  </footer>
+
+</div>
