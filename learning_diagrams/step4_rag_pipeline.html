@@ -1,0 +1,415 @@
+<meta charset="UTF-8">
+<title>Question to Answer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F5F4;
+    --ink: #14201D;
+    --ink-soft: #4B5D58;
+    --ink-faint: #7C8B86;
+    --accent: #0E7C66;
+    --accent-soft: #DCEAE6;
+    --line: #C7D1CD;
+    --card-bg: #FDFEFD;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513;
+      --ink: #E8EFEC;
+      --ink-soft: #9FB3AD;
+      --ink-faint: #6C8079;
+      --accent: #3FD8B0;
+      --accent-soft: #16332B;
+      --line: #2A3934;
+      --card-bg: #161D1A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101513;
+    --ink: #E8EFEC;
+    --ink-soft: #9FB3AD;
+    --ink-faint: #6C8079;
+    --accent: #3FD8B0;
+    --accent-soft: #16332B;
+    --line: #2A3934;
+    --card-bg: #161D1A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in { animation: rise 0.6s ease-out both; }
+    .fade-in.d2 { animation-delay: 0.08s; }
+    .fade-in.d3 { animation-delay: 0.16s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  header { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .intro {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  .intro code, p code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-intro {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin-bottom: 1.25rem;
+  }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 1rem 0.5rem;
+  }
+
+  .diagram-scroll svg { display: block; height: auto; }
+
+  #fig-pipeline { width: 100%; min-width: 1200px; }
+  #fig-prompt   { width: 100%; min-width: 900px; }
+  #fig-fail     { width: 100%; min-width: 1050px; }
+
+  figcaption { font-size: 0.88rem; line-height: 1.55; color: var(--ink-soft); }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* SVG shared styles */
+  .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
+  .dg-node-bg { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .dg-stage-bg{ fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .dg-dead    { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dg-line    { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; }
+  .dg-accent-line { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .dg-eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--ink-faint); font-weight: 600; }
+  .dg-eyebrow-accent { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--accent); font-weight: 600; }
+  .dg-stage-title { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; fill: var(--ink); font-weight: 700; }
+  .dg-label   { font-family: var(--font-mono); font-size: 12.5px; fill: var(--ink); font-weight: 600; }
+  .dg-sub     { font-family: var(--font-sans); font-size: 10.5px; fill: var(--ink-soft); }
+  .dg-quote   { font-family: var(--font-mono); font-size: 10px; fill: var(--ink); }
+  .dg-op      { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); }
+  .dg-code-ref{ font-family: var(--font-mono); font-size: 9px; fill: var(--ink-faint); }
+  .dg-arrow-label { font-family: var(--font-mono); font-size: 10.5px; fill: var(--accent); text-anchor: middle; font-weight: 500; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 1.1rem 1.4rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .callout .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  footer .next { font-family: var(--font-mono); color: var(--ink-soft); }
+  footer .prev { font-family: var(--font-mono); color: var(--ink-faint); }
+</style>
+
+<div class="page">
+
+  <header class="fade-in">
+    <span class="eyebrow">Step 4 of 9 · RAG Learning Guide</span>
+    <h1>Question to Answer</h1>
+    <p class="intro">
+      <code>step4_rag.py</code> combines Steps 1–3 (retrieval) with a genuinely new move —
+      <strong>generation</strong>. This is the first LLM chat call in the project, and the first prompt
+      engineered specifically to keep the model inside retrieved context instead of its own pretrained
+      memory.
+    </p>
+  </header>
+
+  <section class="fade-in d2">
+    <h2>Retrieve → Augment → Generate, for one real question</h2>
+    <p class="section-intro">
+      Three stages, run top to bottom exactly like the acronym reads. Every chunk, score, and word of
+      text below is real output from asking <code>"Where is the Eiffel Tower?"</code>.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-pipeline" viewBox="0 0 1400 460" role="img"
+             aria-label="Retrieve, Augment, Generate pipeline for the question Where is the Eiffel Tower. Retrieve returns two chunks scored 0.899 and 0.620. Augment builds a numbered context block and inserts it into a three-instruction prompt template. Generate sends that prompt to llama3.2:3b and returns the grounded answer citing source 1.">
+          <defs>
+            <marker id="p1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+            <marker id="p2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <!-- Stage 1: RETRIEVE -->
+          <rect class="dg-stage-bg" x="20" y="20" width="420" height="420" rx="14" />
+          <text class="dg-stage-title" x="40" y="46">1 · RETRIEVE</text>
+          <text class="dg-code-ref" x="40" y="60">L121–124</text>
+
+          <rect class="dg-card-bg" x="40" y="76" width="380" height="54" rx="8" />
+          <text class="dg-eyebrow" x="54" y="96">QUESTION</text>
+          <text class="dg-label" x="54" y="116">"Where is the Eiffel Tower?"</text>
+
+          <line class="dg-line" x1="230" y1="130" x2="230" y2="156" marker-end="url(#p1)" />
+          <text class="dg-op" x="54" y="150">collection.query(n_results=2)</text>
+
+          <rect class="dg-card-bg" x="40" y="164" width="380" height="60" rx="8" />
+          <text class="dg-eyebrow" x="54" y="182">[0.899] TRAVEL.TXT · P1</text>
+          <text class="dg-quote" x="54" y="200">The Eiffel Tower is located in Paris, France.</text>
+
+          <rect class="dg-card-bg" x="40" y="232" width="380" height="60" rx="8" />
+          <text class="dg-eyebrow" x="54" y="250">[0.620] TRAVEL.TXT · P1</text>
+          <text class="dg-quote" x="54" y="268">Paris is the capital and most populous</text>
+          <text class="dg-quote" x="54" y="280">city of France.</text>
+
+          <text class="dg-sub" x="40" y="316">score = 1 − distance, same conversion as Step 3</text>
+
+          <!-- arrow to stage 2 -->
+          <line class="dg-accent-line" x1="440" y1="230" x2="478" y2="230" marker-end="url(#p2)" />
+          <text class="dg-arrow-label" x="459" y="216">chunks</text>
+
+          <!-- Stage 2: AUGMENT -->
+          <rect class="dg-stage-bg" x="480" y="20" width="420" height="420" rx="14" />
+          <text class="dg-stage-title" x="500" y="46">2 · AUGMENT</text>
+          <text class="dg-code-ref" x="500" y="60">L56–69</text>
+
+          <rect class="dg-card-bg" x="500" y="76" width="380" height="96" rx="8" />
+          <text class="dg-eyebrow" x="514" y="94">CONTEXT_TEXT · L56–59</text>
+          <text class="dg-quote" x="514" y="112">[1] (travel.txt p1)</text>
+          <text class="dg-quote" x="514" y="126">The Eiffel Tower is located in Paris, France.</text>
+          <text class="dg-quote" x="514" y="146">[2] (travel.txt p1)</text>
+          <text class="dg-quote" x="514" y="160">Paris is the capital and most populous…</text>
+
+          <line class="dg-line" x1="690" y1="172" x2="690" y2="196" marker-end="url(#p1)" />
+
+          <rect class="dg-card-bg" x="500" y="204" width="380" height="150" rx="8" />
+          <text class="dg-eyebrow" x="514" y="222">PROMPT TEMPLATE · L61–69</text>
+          <text class="dg-quote" x="514" y="240">• answer using ONLY the context</text>
+          <text class="dg-quote" x="514" y="256">• if missing → say the exact fallback</text>
+          <text class="dg-quote" x="514" y="272">  phrase, verbatim</text>
+          <text class="dg-quote" x="514" y="288">• always cite source(s)</text>
+          <text class="dg-sub" x="514" y="312">+ Context: [above]</text>
+          <text class="dg-sub" x="514" y="328">+ Question: "Where is the Eiffel Tower?"</text>
+          <text class="dg-sub" x="514" y="344">→ one prompt string · see Fig. 2</text>
+
+          <!-- arrow to stage 3 -->
+          <line class="dg-accent-line" x1="900" y1="230" x2="938" y2="230" marker-end="url(#p2)" />
+          <text class="dg-arrow-label" x="919" y="216">prompt</text>
+
+          <!-- Stage 3: GENERATE -->
+          <rect class="dg-stage-bg" x="940" y="20" width="420" height="420" rx="14" />
+          <text class="dg-stage-title" x="960" y="46">3 · GENERATE</text>
+          <text class="dg-code-ref" x="960" y="60">L71–85</text>
+
+          <rect class="dg-card-bg" x="960" y="76" width="380" height="70" rx="8" />
+          <text class="dg-eyebrow" x="974" y="96">POST /api/chat</text>
+          <text class="dg-sub" x="974" y="114">model: llama3.2:3b</text>
+          <text class="dg-sub" x="974" y="130">stream: false · timeout=120</text>
+
+          <line class="dg-line" x1="1150" y1="146" x2="1150" y2="170" marker-end="url(#p1)" />
+
+          <rect class="dg-node-bg" x="960" y="178" width="380" height="140" rx="10" />
+          <text class="dg-eyebrow-accent" x="974" y="198">ANSWER — data["message"]["content"]</text>
+          <text class="dg-quote" x="974" y="220">"According to the provided context,</text>
+          <text class="dg-quote" x="974" y="236">the Eiffel Tower is located in Paris,</text>
+          <text class="dg-quote" x="974" y="252">France."</text>
+          <text class="dg-quote" x="974" y="276">Source: [1] (travel.txt p1)</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> real scores, real chunks, real answer from a live run against
+        <code>llama3.2:3b</code>. The model cited source <code>[1]</code> unprompted — the numbering scheme
+        from <code>context_text</code> is doing real work here, not just decoration.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d2">
+    <h2>The prompt is the whole trick</h2>
+    <p class="section-intro">
+      This is the literal string sent to <code>/api/chat</code> for the question above — built from the
+      two retrieved chunks plus three fixed instructions. One of those instructions matters more than the
+      other two combined.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-prompt" viewBox="0 0 1000 400" role="img"
+             aria-label="The exact prompt text sent to the model: an instruction to answer using only the context, a highlighted instruction to say a specific fallback phrase if the context lacks the answer, an instruction to cite sources, the numbered context block, the question, and a trailing Answer colon.">
+          <text class="dg-eyebrow" x="30" y="20">PROMPT — THE ACTUAL STRING SENT TO /api/chat</text>
+          <rect x="30" y="34" width="940" height="340" rx="8" fill="#0B0F0E" stroke="var(--line)" />
+          <g font-family="var(--font-mono)" font-size="11.5px">
+            <text x="50" y="62"  fill="#CFEFE3">You are a helpful assistant. Answer the question using ONLY the context below.</text>
+            <rect x="42" y="72" width="4" height="20" fill="var(--accent)" />
+            <text x="50" y="86"  fill="#8FF0D2" font-weight="700">If the context does not contain enough information, say "I don't know based on the provided documents."</text>
+            <text x="50" y="110" fill="#CFEFE3">Always cite which source(s) you used.</text>
+
+            <text x="50" y="146" fill="#6C8079">Context:</text>
+            <text x="50" y="166" fill="#8FA69E">[1] (travel.txt p1)</text>
+            <text x="50" y="184" fill="#CFEFE3">The Eiffel Tower is located in Paris, France.</text>
+            <text x="50" y="212" fill="#8FA69E">[2] (travel.txt p1)</text>
+            <text x="50" y="230" fill="#CFEFE3">Paris is the capital and most populous city of France.</text>
+
+            <text x="50" y="266" fill="#CFEFE3">Question: Where is the Eiffel Tower?</text>
+            <text x="50" y="300" fill="#6C8079">Answer:</text>
+          </g>
+          <text x="60" y="356" font-family="var(--font-mono)" font-size="10px" fill="var(--accent)">↑ the most important line in the file — a literal, checkable fallback phrase</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> per the guide's own analysis: without a defined, literal refusal phrase,
+        a model asked something outside its context tends to either hallucinate an answer anyway or refuse
+        unpredictably in ways you can't reliably detect in code. A fixed string is something later code —
+        Step 8's evaluator — can actually grep for.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>The adversarial test: no answer in the documents</h2>
+    <p class="section-intro">
+      The fourth question in this run has no answer anywhere in the 7 chunks — on purpose.
+      Retrieval doesn't know that; generation does.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-fail" viewBox="0 0 1200 430" role="img"
+             aria-label="Question What is the capital of Japan. Retrieval still returns its top 2 chunks, scored 0.652 and 0.543, both about Paris and irrelevant to Japan. Generation correctly refuses with the exact fallback phrase, though it also appends a source citation despite saying it doesn't know — a caution flagged as an unverified inconsistency.">
+          <defs>
+            <marker id="p3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+
+          <rect class="dg-card-bg" x="20" y="140" width="220" height="80" rx="10" />
+          <text class="dg-eyebrow" x="34" y="162">QUESTION</text>
+          <text class="dg-label" x="34" y="184">"What is the capital</text>
+          <text class="dg-label" x="34" y="200">of Japan?"</text>
+
+          <line class="dg-line" x1="240" y1="180" x2="278" y2="180" marker-end="url(#p3)" />
+          <text class="dg-arrow-label" x="259" y="166">query() — L122</text>
+
+          <rect class="dg-card-bg" x="280" y="60" width="420" height="240" rx="10" />
+          <text class="dg-eyebrow" x="294" y="82">RETRIEVED — TOP 2 ANYWAY</text>
+          <rect class="dg-card-bg" x="294" y="94" width="392" height="56" rx="6" />
+          <text class="dg-eyebrow" x="306" y="112">[0.652] TRAVEL.TXT · P1</text>
+          <text class="dg-quote" x="306" y="130">Paris is the capital and most populous city…</text>
+          <rect class="dg-card-bg" x="294" y="158" width="392" height="56" rx="6" />
+          <text class="dg-eyebrow" x="306" y="176">[0.543] TRAVEL.TXT · P1</text>
+          <text class="dg-quote" x="306" y="194">The Eiffel Tower is located in Paris, France.</text>
+          <text class="dg-sub" x="294" y="238">lowest scores of any question this run</text>
+          <text class="dg-sub" x="294" y="254">(others: 0.899, 0.812, 0.717) — still returned</text>
+          <text class="dg-sub" x="294" y="270">as "top 2," nothing here flags them as irrelevant</text>
+
+          <line class="dg-line" x1="700" y1="180" x2="738" y2="180" marker-end="url(#p3)" />
+          <text class="dg-arrow-label" x="719" y="166">generate_answer()</text>
+
+          <rect class="dg-node-bg" x="740" y="100" width="380" height="160" rx="10" />
+          <text class="dg-eyebrow-accent" x="754" y="122">ANSWER</text>
+          <text class="dg-quote" x="754" y="146" font-weight="700">"I don't know based on the</text>
+          <text class="dg-quote" x="754" y="162" font-weight="700">provided documents."</text>
+          <text class="dg-sub" x="754" y="192">(Source: travel.txt, p1)</text>
+
+          <rect class="dg-dead" x="20" y="340" width="1160" height="70" rx="8" />
+          <text class="dg-code-ref" x="40" y="360">CAUTION — THE PROMPT WORKED, BUT NOTHING VERIFIES IT</text>
+          <text class="dg-sub" x="40" y="378">The answer still appends a source citation right after saying it doesn't know — harmless here, but</text>
+          <text class="dg-sub" x="40" y="394">nothing checks that citations only appear when the model actually used the context. That's Step 8's job.</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 3 —</strong> the fallback phrase came back <em>exact</em> — the prompt engineering held.
+        What it didn't catch is the model still appending a source, which the caution box above calls out
+        rather than papering over.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="callout fade-in d3">
+    <span class="eyebrow">Worth noticing, not yet proving</span>
+    Retrieval always returns <em>something</em> — for the Japan question it still handed back its two
+    least-bad chunks, both about Paris, with no signal that they weren't actually relevant. The prompt is
+    what saved this answer, not retrieval. And nothing in this file checks that the model actually stayed
+    grounded — <strong>Step 8</strong>'s faithfulness judge is the later fix for that exact gap. Next: these
+    7 chunks are still hand-typed tuples. <strong>Step 5 — Real PDFs</strong> replaces them with text
+    actually extracted and chunked from real files.
+  </section>
+
+  <footer>
+    <span class="prev">← Step 3: Chunks to an Index</span>
+    <span>step4_rag.py · retrieval + llama3.2:3b via local Ollama</span>
+    <span class="next">Next → Step 5: Real PDFs</span>
+  </footer>
+
+</div>
