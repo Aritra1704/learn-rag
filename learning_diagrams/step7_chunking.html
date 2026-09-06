@@ -1,0 +1,453 @@
+<meta charset="UTF-8">
+<title>Splits to a Winner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F5F4;
+    --ink: #14201D;
+    --ink-soft: #4B5D58;
+    --ink-faint: #7C8B86;
+    --accent: #0E7C66;
+    --accent-soft: #DCEAE6;
+    --line: #C7D1CD;
+    --card-bg: #FDFEFD;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513;
+      --ink: #E8EFEC;
+      --ink-soft: #9FB3AD;
+      --ink-faint: #6C8079;
+      --accent: #3FD8B0;
+      --accent-soft: #16332B;
+      --line: #2A3934;
+      --card-bg: #161D1A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101513;
+    --ink: #E8EFEC;
+    --ink-soft: #9FB3AD;
+    --ink-faint: #6C8079;
+    --accent: #3FD8B0;
+    --accent-soft: #16332B;
+    --line: #2A3934;
+    --card-bg: #161D1A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in { animation: rise 0.6s ease-out both; }
+    .fade-in.d2 { animation-delay: 0.08s; }
+    .fade-in.d3 { animation-delay: 0.16s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  header { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .intro {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  .intro code, p code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-intro {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin-bottom: 1.25rem;
+  }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 1rem 0.5rem;
+  }
+
+  .diagram-scroll svg { display: block; height: auto; }
+
+  #fig-shapes { width: 100%; min-width: 1000px; }
+  #fig-cause  { width: 100%; min-width: 1000px; }
+  #fig-matrix { width: 100%; min-width: 940px; }
+
+  figcaption { font-size: 0.88rem; line-height: 1.55; color: var(--ink-soft); }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* SVG shared styles */
+  .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
+  .dg-node-bg { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .dg-dead    { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dg-line    { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; }
+  .dg-accent-line { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .dg-eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--ink-faint); font-weight: 600; }
+  .dg-eyebrow-accent { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--accent); font-weight: 600; }
+  .dg-label   { font-family: var(--font-mono); font-size: 12.5px; fill: var(--ink); font-weight: 600; }
+  .dg-sub     { font-family: var(--font-sans); font-size: 10.5px; fill: var(--ink-soft); }
+  .dg-quote   { font-family: var(--font-mono); font-size: 10px; fill: var(--ink); }
+  .dg-quote-accent { font-family: var(--font-mono); font-size: 10px; fill: var(--accent); font-weight: 600; }
+  .dg-quote-dead { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-faint); }
+  .dg-op      { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); }
+  .dg-code-ref{ font-family: var(--font-mono); font-size: 9px; fill: var(--ink-faint); }
+  .dg-arrow-label { font-family: var(--font-mono); font-size: 10.5px; fill: var(--accent); text-anchor: middle; font-weight: 500; }
+  .dg-tick    { stroke: var(--ink-faint); stroke-width: 1; }
+  .dg-tick-label { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-faint); text-anchor: middle; }
+  .dg-score   { font-family: var(--font-mono); font-size: 13px; fill: var(--ink); font-weight: 600; text-anchor: middle; }
+  .dg-score-accent { font-family: var(--font-mono); font-size: 13px; fill: var(--accent); font-weight: 700; text-anchor: middle; }
+  .dg-col-head { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.05em; fill: var(--ink-soft); text-anchor: middle; font-weight: 600; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 1.1rem 1.4rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .callout .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  footer .next { font-family: var(--font-mono); color: var(--ink-soft); }
+  footer .prev { font-family: var(--font-mono); color: var(--ink-faint); }
+</style>
+
+<div class="page">
+
+  <header class="fade-in">
+    <span class="eyebrow">Step 7 of 9 · RAG Learning Guide</span>
+    <h1>Splits to a Winner</h1>
+    <p class="intro">
+      <code>step7_chunking.py</code> takes the same 5-paragraph document and the same 250-character
+      target size, and runs it through four different splitters — fixed, sentence-aware,
+      paragraph-aware, recursive — then measures which one actually retrieves better. Every number
+      below is real output from one run.
+    </p>
+  </header>
+
+  <section class="fade-in d2">
+    <h2>Same cap, four different shapes</h2>
+    <p class="section-intro">
+      <code>CHUNK_SIZE = 250</code> is held constant across all four strategies — the controlled
+      variable that makes comparing them meaningful. What differs is chunk count, size spread, and
+      exactly where the cut falls.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-shapes" viewBox="0 0 1080 400" role="img"
+             aria-label="Four strategies applied to the same document with chunk_size 250. Fixed produces 8 chunks sized 207 to 250, average 244. Sentence-aware produces 9 chunks sized 165 to 369, average 287. Paragraph-aware produces 10 chunks sized 64 to 316, average 217. Recursive produces 10 chunks sized 129 to 273, average 203. On the right, fixed chunking's real chunk 1 to chunk 2 boundary: chunk 1 ends mid-word in unsupervised learn, and chunk 2 begins by restating supervised learning before completing unsupervised learning whole.">
+          <rect class="dg-card-bg" x="20" y="20" width="480" height="360" rx="10" />
+          <text class="dg-eyebrow" x="34" y="42">SAME DOCUMENT, SAME CHUNK_SIZE=250 · L254-259</text>
+          <line x1="20" y1="56" x2="500" y2="56" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-label" x="34" y="80">1-fixed</text>
+          <text class="dg-sub" x="34" y="96">8 chunks · min 207 · avg 244 · max 250</text>
+          <rect class="dg-card-bg" x="34" y="104" width="432" height="10" rx="5" />
+          <rect x="34" y="104" width="255" height="10" rx="5" fill="var(--ink-faint)" />
+
+          <text class="dg-label" x="34" y="140">2-sentence</text>
+          <text class="dg-sub" x="34" y="156">9 chunks · min 165 · avg 287 · max 369</text>
+          <rect class="dg-card-bg" x="34" y="164" width="432" height="10" rx="5" />
+          <rect x="34" y="164" width="300" height="10" rx="5" fill="var(--ink-faint)" />
+
+          <text class="dg-label" x="34" y="200">3-paragraph</text>
+          <text class="dg-sub" x="34" y="216">10 chunks · min 64 · avg 217 · max 316</text>
+          <rect class="dg-card-bg" x="34" y="224" width="432" height="10" rx="5" />
+          <rect x="34" y="224" width="227" height="10" rx="5" fill="var(--accent)" />
+
+          <text class="dg-label" x="34" y="260">4-recursive</text>
+          <text class="dg-sub" x="34" y="276">10 chunks · min 129 · avg 203 · max 273</text>
+          <rect class="dg-card-bg" x="34" y="284" width="432" height="10" rx="5" />
+          <rect x="34" y="284" width="212" height="10" rx="5" fill="var(--ink-faint)" />
+
+          <text class="dg-sub" x="34" y="322">bar = average chunk size, to scale</text>
+          <rect class="dg-card-bg" x="34" y="336" width="432" height="34" rx="8" />
+          <text class="dg-sub" x="48" y="358">min/avg/max size ≠ quality — Fig. 3 measures that directly</text>
+
+          <rect class="dg-card-bg" x="520" y="20" width="540" height="360" rx="10" />
+          <text class="dg-eyebrow" x="534" y="42">FIXED CUTS MID-WORD — REAL OUTPUT, L52-57</text>
+          <line x1="520" y1="56" x2="1060" y2="56" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow" x="534" y="76">CHUNK 1 — LAST 60 OF 250 CHARS</text>
+          <rect class="dg-card-bg" x="534" y="86" width="512" height="46" rx="8" />
+          <text class="dg-quote" x="548" y="106">"...of machine learning: supervised learning,</text>
+          <text class="dg-quote" x="548" y="122">unsupervised learn"</text>
+
+          <line class="dg-line" x1="790" y1="132" x2="790" y2="154" marker-end="url(#c1)" />
+          <text class="dg-code-ref" x="804" y="150">overlap = 40 chars</text>
+
+          <text class="dg-eyebrow-accent" x="534" y="176">CHUNK 2 — FIRST 74 OF 249 CHARS</text>
+          <rect class="dg-node-bg" x="534" y="186" width="512" height="46" rx="8" />
+          <text class="dg-quote" x="548" y="206">"supervised learning, unsupervised learning,</text>
+          <text class="dg-quote" x="548" y="222">and reinforcement learning."</text>
+
+          <rect class="dg-card-bg" x="534" y="244" width="512" height="90" rx="8" />
+          <text class="dg-eyebrow" x="548" y="264">WHAT THE OVERLAP BUYS — AND COSTS</text>
+          <text class="dg-sub" x="548" y="284">"unsupervised learning" now appears whole in chunk 2 —</text>
+          <text class="dg-sub" x="548" y="300">but "supervised learning" (a different list item) is now</text>
+          <text class="dg-sub" x="548" y="316">stated in both chunks, redundantly.</text>
+
+          <defs>
+            <marker id="c1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> the same failure the script's own docstring describes generically —
+        cutting "recognition" into "recogni" / "tion" — showing up in this run's real chunk boundary,
+        inside the phrase "unsupervised learning."
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d2">
+    <h2>Why paragraph-aware beats sentence-aware on one real query</h2>
+    <p class="section-intro">
+      Both strategies pack whole sentences under the cap — the difference is where they're willing to
+      reset. <code>chunk_sentences()</code> runs across the entire document and doesn't know a
+      paragraph break happened; <code>chunk_paragraphs()</code> flushes its buffer at every paragraph
+      boundary (L104-106) before falling back to sentence-splitting.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-cause" viewBox="0 0 1080 460" role="img"
+             aria-label="Source paragraph 3, about neural networks, ends with the sentence Deep learning refers to neural networks with many hidden layers. Source paragraph 4 begins Retrieval-Augmented Generation, or RAG, combines a retrieval system with a language model. The sentence-aware strategy's chunk 4 spans both paragraphs, opening with the neural-network sentence before the RAG content. The paragraph-aware strategy flushes at the paragraph boundary first, so its chunk 6 is pure RAG content with no neural-network sentence. Querying What is retrieval augmented generation, the contaminated sentence-aware chunk scores 0.7279 while the pure paragraph-aware chunk scores 0.8123 and wins.">
+          <text class="dg-eyebrow" x="20" y="18">TWO REAL SOURCE PARAGRAPHS, BACK TO BACK IN THE DOCUMENT</text>
+
+          <rect class="dg-card-bg" x="20" y="28" width="500" height="50" rx="8" />
+          <text class="dg-eyebrow" x="34" y="48">PARAGRAPH 3 — 316 CHARS — ends:</text>
+          <text class="dg-quote" x="34" y="66">"...Deep learning refers to neural networks with many hidden layers."</text>
+
+          <rect class="dg-node-bg" x="560" y="28" width="500" height="50" rx="8" />
+          <text class="dg-eyebrow-accent" x="574" y="48">PARAGRAPH 4 — 460 CHARS — begins:</text>
+          <text class="dg-quote" x="574" y="66">"Retrieval-Augmented Generation, or RAG, combines..."</text>
+
+          <line class="dg-line" x1="540" y1="53" x2="558" y2="53" />
+
+          <!-- LEFT: sentence-aware, spans boundary -->
+          <rect class="dg-card-bg" x="20" y="100" width="500" height="220" rx="10" />
+          <text class="dg-eyebrow" x="34" y="122">2-SENTENCE — chunk_sentences() runs across the whole doc</text>
+          <line x1="20" y1="134" x2="520" y2="134" stroke="var(--line)" stroke-width="1" />
+          <text class="dg-code-ref" x="34" y="152">chunk 4 of 9 — 292 chars, real output</text>
+
+          <rect class="dg-dead" x="34" y="160" width="472" height="34" rx="6" />
+          <text class="dg-quote-dead" x="46" y="181">"Deep learning refers to neural networks with hidden layers."</text>
+
+          <rect class="dg-card-bg" x="34" y="198" width="472" height="50" rx="6" />
+          <text class="dg-quote" x="46" y="216">"Retrieval-Augmented Generation, or RAG, combines a</text>
+          <text class="dg-quote" x="46" y="232">retrieval system with a language model..."</text>
+
+          <text class="dg-sub" x="34" y="270">no paragraph flush — the neural-network sentence rides along</text>
+          <text class="dg-sub" x="34" y="286">as the FIRST sentence of an otherwise RAG-topic chunk</text>
+
+          <rect class="dg-card-bg" x="34" y="298" width="472" height="14" rx="4" />
+
+          <!-- RIGHT: paragraph-aware, flushes first -->
+          <rect class="dg-node-bg" x="560" y="100" width="500" height="220" rx="10" />
+          <text class="dg-eyebrow-accent" x="574" y="122">3-PARAGRAPH — flush buffer at boundary, L104-106, then split</text>
+          <line x1="560" y1="134" x2="1060" y2="134" stroke="var(--accent)" stroke-width="1" opacity="0.4" />
+          <text class="dg-code-ref" x="574" y="152">chunk 6 of 10 — 292 chars, real output</text>
+
+          <rect class="dg-card-bg" x="574" y="160" width="472" height="68" rx="6" />
+          <text class="dg-quote" x="586" y="178">"Retrieval-Augmented Generation, or RAG, combines a</text>
+          <text class="dg-quote" x="586" y="194">retrieval system with a language model. Instead of</text>
+          <text class="dg-quote" x="586" y="210">relying solely on the model's memorised knowledge..."</text>
+
+          <text class="dg-sub" x="574" y="248">paragraph 3 flushed BEFORE this fallback ran — every sentence</text>
+          <text class="dg-sub" x="574" y="264">in this chunk comes from paragraph 4 alone</text>
+
+          <line class="dg-line" x1="270" y1="320" x2="270" y2="344" marker-end="url(#c2)" />
+          <line class="dg-line" x1="810" y1="320" x2="810" y2="344" marker-end="url(#c2)" />
+
+          <rect class="dg-card-bg" x="20" y="352" width="500" height="72" rx="10" />
+          <text class="dg-eyebrow" x="34" y="374">QUERY: "What is retrieval augmented generation?"</text>
+          <text class="dg-score" x="270" y="404">0.7279</text>
+          <text class="dg-sub" x="220" y="416" text-anchor="middle">contaminated chunk — real score</text>
+
+          <rect class="dg-node-bg" x="560" y="352" width="500" height="72" rx="10" />
+          <text class="dg-eyebrow-accent" x="574" y="374">SAME QUERY, PARAGRAPH-AWARE INDEX</text>
+          <text class="dg-score-accent" x="810" y="404">0.8123</text>
+          <text class="dg-sub" x="760" y="416" text-anchor="middle">pure chunk wins — real score, top hit</text>
+
+          <defs>
+            <marker id="c2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> both chunks are the same length and both contain the full answer —
+        the 0.083 score gap comes entirely from one extra, off-topic sentence riding along at the
+        front of the sentence-aware chunk.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>Three real queries, four strategies, real scores</h2>
+    <p class="section-intro">
+      <code>compare_retrieval()</code> runs each query against all four indexes with <code>n_results=1</code>
+      — sharpest possible test: whose single best chunk wins. Fixed chunking never does.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-matrix" viewBox="0 0 1080 330" role="img"
+             aria-label="Three queries scored against four strategies. What is retrieval augmented generation: fixed 0.7376, sentence 0.7279, paragraph 0.8123 winner, recursive 0.7594. How do neural networks work: fixed 0.7173, sentence 0.7884 tie, paragraph 0.7884 tie, recursive 0.7488. Why is HNSW used in vector databases: fixed 0.6794, sentence 0.7071 tie, paragraph 0.7071 tie, recursive 0.6964. Fixed chunking never wins a single query.">
+          <text class="dg-col-head" x="200" y="34" text-anchor="start">QUERY — n_results=1, top score shown</text>
+          <text class="dg-col-head" x="480" y="34">1-FIXED</text>
+          <text class="dg-col-head" x="640" y="34">2-SENTENCE</text>
+          <text class="dg-col-head" x="800" y="34">3-PARAGRAPH</text>
+          <text class="dg-col-head" x="960" y="34">4-RECURSIVE</text>
+          <line x1="20" y1="46" x2="1060" y2="46" stroke="var(--line)" stroke-width="1" />
+
+          <!-- row 1 -->
+          <rect class="dg-card-bg" x="20" y="58" width="380" height="64" rx="8" />
+          <text class="dg-quote" x="34" y="86">"What is retrieval augmented</text>
+          <text class="dg-quote" x="34" y="102">generation?"</text>
+
+          <rect class="dg-card-bg" x="410" y="58" width="140" height="64" rx="8" />
+          <text class="dg-score" x="480" y="96">0.7376</text>
+          <rect class="dg-card-bg" x="570" y="58" width="140" height="64" rx="8" />
+          <text class="dg-score" x="640" y="96">0.7279</text>
+          <rect class="dg-node-bg" x="730" y="58" width="140" height="64" rx="8" />
+          <text class="dg-score-accent" x="800" y="96">0.8123</text>
+          <rect class="dg-card-bg" x="890" y="58" width="140" height="64" rx="8" />
+          <text class="dg-score" x="960" y="96">0.7594</text>
+
+          <!-- row 2 -->
+          <rect class="dg-card-bg" x="20" y="132" width="380" height="64" rx="8" />
+          <text class="dg-quote" x="34" y="168">"How do neural networks work?"</text>
+
+          <rect class="dg-card-bg" x="410" y="132" width="140" height="64" rx="8" />
+          <text class="dg-score" x="480" y="170">0.7173</text>
+          <rect class="dg-node-bg" x="570" y="132" width="140" height="64" rx="8" />
+          <text class="dg-score-accent" x="640" y="170">0.7884</text>
+          <rect class="dg-node-bg" x="730" y="132" width="140" height="64" rx="8" />
+          <text class="dg-score-accent" x="800" y="170">0.7884</text>
+          <rect class="dg-card-bg" x="890" y="132" width="140" height="64" rx="8" />
+          <text class="dg-score" x="960" y="170">0.7488</text>
+
+          <!-- row 3 -->
+          <rect class="dg-card-bg" x="20" y="206" width="380" height="64" rx="8" />
+          <text class="dg-quote" x="34" y="234">"Why is HNSW used in vector</text>
+          <text class="dg-quote" x="34" y="250">databases?"</text>
+
+          <rect class="dg-card-bg" x="410" y="206" width="140" height="64" rx="8" />
+          <text class="dg-score" x="480" y="244">0.6794</text>
+          <rect class="dg-node-bg" x="570" y="206" width="140" height="64" rx="8" />
+          <text class="dg-score-accent" x="640" y="244">0.7071</text>
+          <rect class="dg-node-bg" x="730" y="206" width="140" height="64" rx="8" />
+          <text class="dg-score-accent" x="800" y="244">0.7071</text>
+          <rect class="dg-card-bg" x="890" y="206" width="140" height="64" rx="8" />
+          <text class="dg-score" x="960" y="244">0.6964</text>
+
+          <text class="dg-sub" x="20" y="296">accent = winner or tie for that query · fixed's column never turns accent</text>
+          <text class="dg-sub" x="20" y="312">recursive is mid-pack here — its edge shows on messier text, not this clean 5-paragraph doc</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 3 —</strong> paragraph-aware wins or ties on all three queries; fixed loses all
+        three. Recursive — usually the "best general purpose" pick — comes in third here, because this
+        document's paragraphs are already clean units with nothing messy for recursion to untangle.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="callout fade-in d3">
+    <span class="eyebrow">Worth noticing, not yet proving</span>
+    Every one of this document's 5 source paragraphs is 282–460 characters — all longer than the
+    250-character cap. That means <code>chunk_paragraphs()</code>'s "merge short paragraphs together"
+    branch (L109) and its "flush and start fresh" branch (L112-114) never fire on this input at all —
+    every single output chunk comes from the "paragraph too big → fall back to sentences" branch
+    (L102-108). What's actually winning here isn't merging; it's <em>resetting the sentence
+    accumulator at every paragraph boundary</em> so a chunk can never blend two topics. On a document
+    with genuinely short paragraphs, the other two branches would finally get exercised — and might
+    tell a different story. <strong>Step 8 — Evaluation</strong> stops eyeballing single scores like
+    these and formalizes "which strategy is actually best" into Hit@k and MRR across many queries.
+  </section>
+
+  <footer>
+    <span class="prev">← Step 6: Runs to a Reused Index</span>
+    <span>step7_chunking.py · 4 strategies × 3 queries · llama3.2:3b via local Ollama</span>
+    <span class="next">Next → Step 8: Evaluation</span>
+  </footer>
+
+</div>
