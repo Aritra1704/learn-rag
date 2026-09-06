@@ -1,0 +1,455 @@
+<meta charset="UTF-8">
+<title>Runs to a Reused Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F5F4;
+    --ink: #14201D;
+    --ink-soft: #4B5D58;
+    --ink-faint: #7C8B86;
+    --accent: #0E7C66;
+    --accent-soft: #DCEAE6;
+    --line: #C7D1CD;
+    --card-bg: #FDFEFD;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513;
+      --ink: #E8EFEC;
+      --ink-soft: #9FB3AD;
+      --ink-faint: #6C8079;
+      --accent: #3FD8B0;
+      --accent-soft: #16332B;
+      --line: #2A3934;
+      --card-bg: #161D1A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101513;
+    --ink: #E8EFEC;
+    --ink-soft: #9FB3AD;
+    --ink-faint: #6C8079;
+    --accent: #3FD8B0;
+    --accent-soft: #16332B;
+    --line: #2A3934;
+    --card-bg: #161D1A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in { animation: rise 0.6s ease-out both; }
+    .fade-in.d2 { animation-delay: 0.08s; }
+    .fade-in.d3 { animation-delay: 0.16s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  header { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .intro {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  .intro code, p code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-intro {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin-bottom: 1.25rem;
+  }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 1rem 0.5rem;
+  }
+
+  .diagram-scroll svg { display: block; height: auto; }
+
+  #fig-runs { width: 100%; min-width: 1000px; }
+  #fig-guard { width: 100%; min-width: 1000px; }
+  #fig-route { width: 100%; min-width: 980px; }
+
+  figcaption { font-size: 0.88rem; line-height: 1.55; color: var(--ink-soft); }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* SVG shared styles */
+  .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
+  .dg-node-bg { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .dg-dead    { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dg-line    { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; }
+  .dg-accent-line { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .dg-eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--ink-faint); font-weight: 600; }
+  .dg-eyebrow-accent { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--accent); font-weight: 600; }
+  .dg-label   { font-family: var(--font-mono); font-size: 12.5px; fill: var(--ink); font-weight: 600; }
+  .dg-sub     { font-family: var(--font-sans); font-size: 10.5px; fill: var(--ink-soft); }
+  .dg-quote   { font-family: var(--font-mono); font-size: 10px; fill: var(--ink); }
+  .dg-quote-accent { font-family: var(--font-mono); font-size: 10px; fill: var(--accent); font-weight: 600; }
+  .dg-op      { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); }
+  .dg-code-ref{ font-family: var(--font-mono); font-size: 9px; fill: var(--ink-faint); }
+  .dg-arrow-label { font-family: var(--font-mono); font-size: 10.5px; fill: var(--accent); text-anchor: middle; font-weight: 500; }
+  .dg-tick    { stroke: var(--ink-faint); stroke-width: 1; }
+  .dg-tick-label { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-faint); text-anchor: middle; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 1.1rem 1.4rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .callout .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  footer .next { font-family: var(--font-mono); color: var(--ink-soft); }
+  footer .prev { font-family: var(--font-mono); color: var(--ink-faint); }
+</style>
+
+<div class="page">
+
+  <header class="fade-in">
+    <span class="eyebrow">Step 6 of 9 · RAG Learning Guide</span>
+    <h1>Runs to a Reused Index</h1>
+    <p class="intro">
+      <code>step6_persistent.py</code> fixes two step-5 limits: the index lived only in memory, so every
+      run re-embedded every chunk from scratch, and only one PDF could be indexed at a time.
+      <code>PersistentClient</code> writes to disk; a manifest collection remembers which files are
+      already in. Same three real PDFs as before — run twice, watch what changes.
+    </p>
+  </header>
+
+  <section class="fade-in d2">
+    <h2>Run it twice: full embed, then instant skip</h2>
+    <p class="section-intro">
+      First execution against a fresh <code>./chroma_db</code>: three real PDFs, ten Ollama embedding
+      calls, real wall-clock time per file. Second execution, same command, same folder: the manifest
+      already knows all three files, so <code>index_pdf()</code> returns before touching Ollama at all.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-runs" viewBox="0 0 1080 400" role="img"
+             aria-label="Both runs of python3 step6_persistent.py share one on-disk index at chroma_db holding 22 vectors across 3 files and 3 manifest fingerprints. Run 1, a fresh index, embeds ai_concepts.pdf in 1.6 seconds, python_guide.pdf in 0.4 seconds, and world_history.pdf in 0.1 seconds, for 22 vectors embedded. Run 2, the same command run again, skips all three files because the manifest already has their fingerprints, embedding zero vectors and finishing instantly.">
+          <defs>
+            <marker id="r1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+            <marker id="r2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <rect class="dg-node-bg" x="350" y="20" width="380" height="60" rx="10" />
+          <text class="dg-eyebrow-accent" x="364" y="40" text-anchor="start">./chroma_db — ON DISK, L214</text>
+          <text class="dg-label" x="364" y="60">documents: 22 vectors · index-manifest: 3</text>
+
+          <line class="dg-line" x1="430" y1="80" x2="290" y2="112" marker-end="url(#r1)" />
+          <line class="dg-line" x1="650" y1="80" x2="790" y2="112" marker-end="url(#r1)" />
+
+          <!-- RUN 1 -->
+          <rect class="dg-card-bg" x="20" y="112" width="500" height="268" rx="10" />
+          <text class="dg-eyebrow" x="34" y="134">RUN 1 — FRESH INDEX · python3 step6_persistent.py</text>
+          <line x1="20" y1="146" x2="520" y2="146" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-quote" x="34" y="168">[index] ai_concepts.pdf    → 10 chunks ... done in 1.6s</text>
+          <text class="dg-quote" x="34" y="190">[index] python_guide.pdf   →  6 chunks ... done in 0.4s</text>
+          <text class="dg-quote" x="34" y="212">[index] world_history.pdf  →  6 chunks ... done in 0.1s</text>
+          <line x1="20" y1="228" x2="520" y2="228" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-sub" x="34" y="250">is_indexed() → False for all three — manifest is empty</text>
+          <text class="dg-sub" x="34" y="268">each file: pdf_to_chunks() → collection.add() → mark_indexed()</text>
+          <text class="dg-sub" x="34" y="286">one get_embedding() call per chunk, 22 calls to Ollama total</text>
+
+          <rect class="dg-card-bg" x="34" y="304" width="472" height="58" rx="8" />
+          <text class="dg-eyebrow" x="48" y="326">RESULT</text>
+          <text class="dg-label" x="48" y="348">22 vectors embedded · ~2.1s wall time</text>
+
+          <!-- RUN 2 -->
+          <rect class="dg-node-bg" x="560" y="112" width="500" height="268" rx="10" />
+          <text class="dg-eyebrow-accent" x="574" y="134">RUN 2 — SAME COMMAND, RUN AGAIN</text>
+          <line x1="560" y1="146" x2="1060" y2="146" stroke="var(--accent)" stroke-width="1" opacity="0.4" />
+
+          <text class="dg-quote-accent" x="574" y="168">[skip]  ai_concepts.pdf   (already in index)</text>
+          <text class="dg-quote-accent" x="574" y="190">[skip]  python_guide.pdf  (already in index)</text>
+          <text class="dg-quote-accent" x="574" y="212">[skip]  world_history.pdf (already in index)</text>
+          <line x1="560" y1="228" x2="1060" y2="228" stroke="var(--accent)" stroke-width="1" opacity="0.4" />
+
+          <text class="dg-sub" x="574" y="250">is_indexed() → True for all three — fingerprints match on disk</text>
+          <text class="dg-sub" x="574" y="268">index_pdf() returns 0 before pdf_to_chunks() ever runs — L118-120</text>
+          <text class="dg-sub" x="574" y="286">zero calls to Ollama — the guard is the only work done</text>
+
+          <rect class="dg-card-bg" x="574" y="304" width="472" height="58" rx="8" />
+          <text class="dg-eyebrow-accent" x="588" y="326">RESULT</text>
+          <text class="dg-label" x="588" y="348">0 vectors re-embedded · same 22 on disk, instantly</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> both runs read and write the same on-disk collection. What changes
+        between them isn't the data — it's whether <code>index_pdf()</code>'s guard clause finds a
+        matching fingerprint before doing any expensive work.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d2">
+    <h2>Two small fixes doing the real work</h2>
+    <p class="section-intro">
+      Neither is complicated: a cheap fingerprint check answers "have I seen this file?", and a
+      per-file id prefix answers "which file does chunk 3 belong to?" — the exact gap step 5's
+      <code>str(i)</code> left open once a second document showed up.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-guard" viewBox="0 0 1080 340" role="img"
+             aria-label="Left panel: file fingerprinting. ai_concepts.pdf, 4480 bytes, becomes the fingerprint string ai_concepts.pdf double-colon 4480, stored as both the id and document text in the manifest collection, and looked up by exact id match, never by similarity search. Right panel: composite ids. Step 5 numbered every file's chunks starting at 0, so a second file would collide. Step 6 builds ids as the file stem plus double colon plus index, giving ai_concepts colon colon 0 through 9, python underscore guide colon colon 0 through 5, and world underscore history colon colon 0 through 5, all coexisting in one collection with no collisions.">
+          <defs>
+            <marker id="g1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+          <!-- LEFT: fingerprint check -->
+          <rect class="dg-card-bg" x="20" y="20" width="500" height="300" rx="10" />
+          <text class="dg-eyebrow" x="34" y="42">HAS THIS FILE CHANGED? · _file_fingerprint() L97-100</text>
+          <line x1="20" y1="56" x2="520" y2="56" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-label" x="34" y="80">ai_concepts.pdf</text>
+          <text class="dg-sub" x="34" y="98">Path(pdf_path).stat().st_size = 4480 bytes</text>
+
+          <line class="dg-line" x1="200" y1="86" x2="240" y2="86" marker-end="url(#g1)" />
+          <text class="dg-quote-accent" x="252" y="90">"ai_concepts.pdf::4480"</text>
+
+          <line class="dg-line" x1="270" y1="100" x2="270" y2="122" marker-end="url(#g1)" />
+          <text class="dg-code-ref" x="284" y="118">manifest.get(ids=[fp]) — L105</text>
+
+          <rect class="dg-node-bg" x="34" y="130" width="472" height="66" rx="8" />
+          <text class="dg-eyebrow-accent" x="48" y="150">index-manifest — real contents, 3 rows</text>
+          <text class="dg-quote" x="48" y="170">ai_concepts.pdf::4480 · python_guide.pdf::2917</text>
+          <text class="dg-quote" x="48" y="186">world_history.pdf::2932</text>
+
+          <text class="dg-sub" x="34" y="222">id doubles as the stored document — ChromaDB requires</text>
+          <text class="dg-sub" x="34" y="238">some text alongside an id; nothing ever reads it back.</text>
+
+          <rect class="dg-card-bg" x="34" y="252" width="472" height="54" rx="8" />
+          <text class="dg-eyebrow" x="48" y="272">BLIND SPOT — acknowledged, not fixed</text>
+          <text class="dg-sub" x="48" y="290">same name + same byte count ⇒ wrongly seen as "unchanged"</text>
+
+          <!-- RIGHT: composite ids -->
+          <rect class="dg-card-bg" x="560" y="20" width="500" height="300" rx="10" />
+          <text class="dg-eyebrow" x="574" y="42">WHICH FILE DOES CHUNK 3 BELONG TO? · index_pdf() L128-129</text>
+          <line x1="560" y1="56" x2="1060" y2="56" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow" x="574" y="76">STEP 5 — one file, ids = str(i)</text>
+          <text class="dg-quote" x="574" y="94">"0", "1", "2" … "9"</text>
+          <text class="dg-sub" x="574" y="112">a second file would restart at "0" — collision</text>
+
+          <line x1="560" y1="126" x2="1060" y2="126" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow-accent" x="574" y="148">STEP 6 — base_id = Path(pdf_path).stem</text>
+          <text class="dg-quote-accent" x="574" y="168">ids = [f"{base_id}::{i}" for i in range(len(chunks))]</text>
+
+          <rect class="dg-node-bg" x="574" y="182" width="472" height="118" rx="8" />
+          <text class="dg-quote" x="588" y="204">ai_concepts::0 … ai_concepts::9      (10 chunks)</text>
+          <text class="dg-quote" x="588" y="224">python_guide::0 … python_guide::5     (6 chunks)</text>
+          <text class="dg-quote" x="588" y="244">world_history::0 … world_history::5   (6 chunks)</text>
+          <text class="dg-sub" x="588" y="270">22 ids, one collection, zero collisions — real ids from</text>
+          <text class="dg-sub" x="588" y="286">this run's `documents` collection</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> both mechanisms are the cheapest possible version of the check they
+        need — an exact-match id lookup instead of a hash, a string prefix instead of a per-file
+        namespace. Neither is bulletproof, and the guide sheet says so on purpose.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>One shared index, five real questions, three documents</h2>
+    <p class="section-intro">
+      This is what multi-document actually buys you: a single <code>collection.query()</code> against
+      all 22 vectors, and each question's top hit still lands on the right source file — real scores
+      from the run above.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-route" viewBox="0 0 1080 430" role="img"
+             aria-label="Five real questions query one shared documents collection holding all three files. What is HNSW and why is it important routes to ai_concepts.pdf page 5, score 0.563. What are Python's four built-in collection types routes to python_guide.pdf page 2, score 0.771. Who was first to walk on the Moon routes to world_history.pdf page 3, score 0.681. What triggered World War I routes to world_history.pdf page 2, score 0.803. How does RAG reduce hallucination routes to ai_concepts.pdf page 4, score 0.786. No question's top hit ever comes from the wrong file.">
+          <defs>
+            <marker id="q1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+            <marker id="q2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+          <text class="dg-eyebrow" x="20" y="18">FIVE REAL QUESTIONS — one run, top_k=3, top hit shown</text>
+
+          <rect class="dg-node-bg" x="460" y="40" width="160" height="360" rx="10" />
+          <text class="dg-eyebrow-accent" x="540" y="70" text-anchor="middle">documents</text>
+          <text class="dg-sub" x="540" y="90" text-anchor="middle">22 vectors</text>
+          <text class="dg-sub" x="540" y="106" text-anchor="middle">3 files</text>
+          <text class="dg-sub" x="540" y="122" text-anchor="middle">1 collection</text>
+          <line x1="490" y1="140" x2="590" y2="140" stroke="var(--accent)" stroke-width="1" opacity="0.4" />
+          <text class="dg-code-ref" x="540" y="380" text-anchor="middle">collection.query()</text>
+          <text class="dg-code-ref" x="540" y="392" text-anchor="middle">n_results=3</text>
+
+          <!-- rows -->
+          <!-- row 1 -->
+          <rect class="dg-card-bg" x="20" y="40" width="420" height="52" rx="8" />
+          <text class="dg-quote" x="34" y="60">"What is HNSW and why is it important?"</text>
+          <text class="dg-code-ref" x="34" y="78">L228</text>
+          <line class="dg-line" x1="440" y1="66" x2="458" y2="66" marker-end="url(#q1)" />
+          <line class="dg-accent-line" x1="622" y1="66" x2="640" y2="66" marker-end="url(#q2)" />
+          <rect class="dg-card-bg" x="642" y="40" width="418" height="52" rx="8" />
+          <text class="dg-eyebrow-accent" x="656" y="60">[0.563] ai_concepts.pdf p5</text>
+          <text class="dg-sub" x="656" y="78">Vector Databases — HNSW indexing algorithm</text>
+
+          <!-- row 2 -->
+          <rect class="dg-card-bg" x="20" y="104" width="420" height="52" rx="8" />
+          <text class="dg-quote" x="34" y="124">"What are Python's four built-in collection types?"</text>
+          <text class="dg-code-ref" x="34" y="142">L229</text>
+          <line class="dg-line" x1="440" y1="130" x2="458" y2="130" marker-end="url(#q1)" />
+          <line class="dg-accent-line" x1="622" y1="130" x2="640" y2="130" marker-end="url(#q2)" />
+          <rect class="dg-card-bg" x="642" y="104" width="418" height="52" rx="8" />
+          <text class="dg-eyebrow-accent" x="656" y="124">[0.771] python_guide.pdf p2</text>
+          <text class="dg-sub" x="656" y="142">Python Data Structures — list, tuple, set, dict</text>
+
+          <!-- row 3 -->
+          <rect class="dg-card-bg" x="20" y="168" width="420" height="52" rx="8" />
+          <text class="dg-quote" x="34" y="188">"Who was first to walk on the Moon?"</text>
+          <text class="dg-code-ref" x="34" y="206">L230</text>
+          <line class="dg-line" x1="440" y1="194" x2="458" y2="194" marker-end="url(#q1)" />
+          <line class="dg-accent-line" x1="622" y1="194" x2="640" y2="194" marker-end="url(#q2)" />
+          <rect class="dg-card-bg" x="642" y="168" width="418" height="52" rx="8" />
+          <text class="dg-eyebrow-accent" x="656" y="188">[0.681] world_history.pdf p3</text>
+          <text class="dg-sub" x="656" y="206">The Space Race — Neil Armstrong</text>
+
+          <!-- row 4 -->
+          <rect class="dg-card-bg" x="20" y="232" width="420" height="52" rx="8" />
+          <text class="dg-quote" x="34" y="252">"What triggered World War I?"</text>
+          <text class="dg-code-ref" x="34" y="270">L231</text>
+          <line class="dg-line" x1="440" y1="258" x2="458" y2="258" marker-end="url(#q1)" />
+          <line class="dg-accent-line" x1="622" y1="258" x2="640" y2="258" marker-end="url(#q2)" />
+          <rect class="dg-card-bg" x="642" y="232" width="418" height="52" rx="8" />
+          <text class="dg-eyebrow-accent" x="656" y="252">[0.803] world_history.pdf p2</text>
+          <text class="dg-sub" x="656" y="270">Assassination of Archduke Franz Ferdinand</text>
+
+          <!-- row 5 -->
+          <rect class="dg-card-bg" x="20" y="296" width="420" height="52" rx="8" />
+          <text class="dg-quote" x="34" y="316">"How does RAG reduce hallucination?"</text>
+          <text class="dg-code-ref" x="34" y="334">L232</text>
+          <line class="dg-line" x1="440" y1="322" x2="458" y2="322" marker-end="url(#q1)" />
+          <line class="dg-accent-line" x1="622" y1="322" x2="640" y2="322" marker-end="url(#q2)" />
+          <rect class="dg-card-bg" x="642" y="296" width="418" height="52" rx="8" />
+          <text class="dg-eyebrow-accent" x="656" y="316">[0.786] ai_concepts.pdf p4</text>
+          <text class="dg-sub" x="656" y="334">RAG fetches documents at query time</text>
+
+          <rect class="dg-card-bg" x="20" y="368" width="420" height="46" rx="8" />
+          <text class="dg-sub" x="34" y="386">defined once — L228-232, sent to the same</text>
+          <text class="dg-sub" x="34" y="400">collection built by index_folder()</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 3 —</strong> two of five questions land on <code>ai_concepts.pdf</code>, two on
+        <code>world_history.pdf</code>, one on <code>python_guide.pdf</code> — cosine similarity alone
+        is doing the routing; nothing in the query tells it which file to prefer.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="callout fade-in d3">
+    <span class="eyebrow">Worth noticing, not yet proving</span>
+    <code>index_pdf()</code> calls <code>collection.add()</code> and only <em>then</em>
+    <code>mark_indexed()</code> — L135-136. If the process dies in between (Ollama times out mid-batch,
+    the machine loses power), the chunks are on disk but the manifest never finds out, so the next run
+    sees <code>is_indexed() == False</code> and re-adds the same file under new ids: duplicate chunks,
+    silently. And chunk boundaries here are still the same blind 500-character window from step 5 — it
+    cuts <code>ai_concepts.pdf</code> after <code>"and h"</code> exactly as it cut <code>sample.pdf</code>,
+    with no sense of where a sentence actually ends. <strong>Step 7 — Chunking Strategies</strong> measures
+    what a sentence- and paragraph-aware splitter actually changes about retrieval, instead of assuming.
+  </section>
+
+  <footer>
+    <span class="prev">← Step 5: PDF to Chunks</span>
+    <span>step6_persistent.py · 3 PDFs → 22 vectors on disk · llama3.2:3b via local Ollama</span>
+    <span class="next">Next → Step 7: Chunking Strategies</span>
+  </footer>
+
+</div>

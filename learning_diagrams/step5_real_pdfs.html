@@ -1,0 +1,425 @@
+<meta charset="UTF-8">
+<title>PDF to Chunks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F5F4;
+    --ink: #14201D;
+    --ink-soft: #4B5D58;
+    --ink-faint: #7C8B86;
+    --accent: #0E7C66;
+    --accent-soft: #DCEAE6;
+    --line: #C7D1CD;
+    --card-bg: #FDFEFD;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513;
+      --ink: #E8EFEC;
+      --ink-soft: #9FB3AD;
+      --ink-faint: #6C8079;
+      --accent: #3FD8B0;
+      --accent-soft: #16332B;
+      --line: #2A3934;
+      --card-bg: #161D1A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101513;
+    --ink: #E8EFEC;
+    --ink-soft: #9FB3AD;
+    --ink-faint: #6C8079;
+    --accent: #3FD8B0;
+    --accent-soft: #16332B;
+    --line: #2A3934;
+    --card-bg: #161D1A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in { animation: rise 0.6s ease-out both; }
+    .fade-in.d2 { animation-delay: 0.08s; }
+    .fade-in.d3 { animation-delay: 0.16s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  header { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .intro {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  .intro code, p code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-intro {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin-bottom: 1.25rem;
+  }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 1rem 0.5rem;
+  }
+
+  .diagram-scroll svg { display: block; height: auto; }
+
+  #fig-build  { width: 100%; min-width: 1000px; }
+  #fig-window { width: 100%; min-width: 880px; }
+  #fig-ask    { width: 100%; min-width: 980px; }
+
+  figcaption { font-size: 0.88rem; line-height: 1.55; color: var(--ink-soft); }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* SVG shared styles */
+  .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
+  .dg-node-bg { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .dg-dead    { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dg-line    { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; }
+  .dg-accent-line { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .dg-eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--ink-faint); font-weight: 600; }
+  .dg-eyebrow-accent { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--accent); font-weight: 600; }
+  .dg-label   { font-family: var(--font-mono); font-size: 12.5px; fill: var(--ink); font-weight: 600; }
+  .dg-sub     { font-family: var(--font-sans); font-size: 10.5px; fill: var(--ink-soft); }
+  .dg-quote   { font-family: var(--font-mono); font-size: 10px; fill: var(--ink); }
+  .dg-quote-accent { font-family: var(--font-mono); font-size: 10px; fill: var(--accent); font-weight: 600; }
+  .dg-op      { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); }
+  .dg-code-ref{ font-family: var(--font-mono); font-size: 9px; fill: var(--ink-faint); }
+  .dg-arrow-label { font-family: var(--font-mono); font-size: 10.5px; fill: var(--accent); text-anchor: middle; font-weight: 500; }
+  .dg-tick    { stroke: var(--ink-faint); stroke-width: 1; }
+  .dg-tick-label { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-faint); text-anchor: middle; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 1.1rem 1.4rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .callout .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  footer .next { font-family: var(--font-mono); color: var(--ink-soft); }
+  footer .prev { font-family: var(--font-mono); color: var(--ink-faint); }
+</style>
+
+<div class="page">
+
+  <header class="fade-in">
+    <span class="eyebrow">Step 5 of 9 · RAG Learning Guide</span>
+    <h1>PDF to Chunks</h1>
+    <p class="intro">
+      <code>step5_real_docs.py</code> replaces the 7 hand-typed sentences with a real PDF. Two genuinely
+      new problems show up: pulling text out of a binary file, and splitting long page text into
+      overlapping windows so no chunk is too big and no sentence is lost at a boundary.
+    </p>
+  </header>
+
+  <section class="fade-in d2">
+    <h2>Five pages become ten chunks</h2>
+    <p class="section-intro">
+      <code>extract_pages()</code> pulls raw text per page from <code>sample.pdf</code>;
+      <code>chunk_text()</code> then slides a 500-character window with 100 characters of overlap across
+      each page independently. Real character counts, real chunk counts, from an actual run.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-build" viewBox="0 0 1090 380" role="img"
+             aria-label="Five PDF pages of 522, 495, 473, 658, and 525 characters each pass through chunk_text with chunk size 500 and overlap 100, producing 2 chunks per page for a total of 10 chunks. Pages 2 and 3 are shorter than the chunk size yet still split into 2 chunks. pdf_to_chunks attaches source and page metadata, and the collection stores all 10 chunks.">
+          <defs>
+            <marker id="q1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+            <marker id="q2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+            </marker>
+          </defs>
+
+          <rect class="dg-card-bg" x="20" y="20" width="400" height="330" rx="10" />
+          <text class="dg-eyebrow" x="34" y="42">SAMPLE.PDF — extract_pages() · L39–48</text>
+          <line x1="20" y1="56" x2="420" y2="56" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow" x="34" y="76">PAGE 1 — 522 CHARS</text>
+          <text class="dg-quote" x="34" y="96">→ chunk_text() = [500, 122]</text>
+          <line x1="20" y1="114" x2="420" y2="114" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow" x="34" y="134">PAGE 2 — 495 CHARS</text>
+          <text class="dg-quote-accent" x="34" y="154">→ [495, 95] · shorter than chunk_size, still splits</text>
+          <line x1="20" y1="172" x2="420" y2="172" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow" x="34" y="192">PAGE 3 — 473 CHARS</text>
+          <text class="dg-quote-accent" x="34" y="212">→ [473, 73] · same — still splits into 2</text>
+          <line x1="20" y1="230" x2="420" y2="230" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow" x="34" y="250">PAGE 4 — 658 CHARS</text>
+          <text class="dg-quote" x="34" y="270">→ chunk_text() = [500, 258]</text>
+          <line x1="20" y1="288" x2="420" y2="288" stroke="var(--line)" stroke-width="1" />
+
+          <text class="dg-eyebrow" x="34" y="308">PAGE 5 — 525 CHARS</text>
+          <text class="dg-quote" x="34" y="328">→ chunk_text() = [500, 125]</text>
+
+          <line class="dg-line" x1="420" y1="185" x2="448" y2="185" marker-end="url(#q1)" />
+          <text class="dg-code-ref" x="434" y="172" text-anchor="middle">per page</text>
+
+          <rect class="dg-card-bg" x="450" y="115" width="280" height="140" rx="10" />
+          <text class="dg-eyebrow" x="464" y="137">pdf_to_chunks() — L70–83</text>
+          <text class="dg-label" x="464" y="159">attach metadata</text>
+          <text class="dg-label" x="464" y="175">per chunk</text>
+          <text class="dg-quote" x="464" y="200">{"source": "sample.pdf",</text>
+          <text class="dg-quote" x="464" y="216">"page": &lt;page_num&gt;}</text>
+
+          <line class="dg-accent-line" x1="730" y1="185" x2="768" y2="185" marker-end="url(#q2)" />
+
+          <rect class="dg-node-bg" x="770" y="125" width="280" height="120" rx="10" />
+          <text class="dg-eyebrow-accent" x="784" y="147">STORED — L142–162</text>
+          <text class="dg-label" x="784" y="169">10 chunks total</text>
+          <text class="dg-sub" x="784" y="189">chunk_size=500 · overlap=100</text>
+          <text class="dg-sub" x="784" y="205">ids = str(i), i = 0..9</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> real character counts from this PDF. Pages 2 and 3 are each
+        <em>shorter</em> than one chunk — worth remembering for the callout below.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d2">
+    <h2>The sliding window, on real text</h2>
+    <p class="section-intro">
+      Page 1 is 522 characters — just over one chunk. Here's exactly where <code>chunk_text()</code> cuts
+      it, using the real text <code>pypdf</code> extracted.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-window" viewBox="0 0 940 330" role="img"
+             aria-label="Page 1's 522 characters as a bar. Chunk 1 spans positions 0 to 500, ending mid-word in the middle of house. Chunk 2 spans positions 400 to 522, starting 100 characters earlier so it recovers the word house whole, ending with the sentence house price prediction intact. The overlap region from 400 to 500 appears in both chunks.">
+          <text class="dg-eyebrow" x="20" y="18">PAGE 1 — 522 REAL CHARACTERS, FROM extract_pages()</text>
+
+          <!-- chunk 1 bracket (above) -->
+          <line class="dg-accent-line" x1="40" y1="40" x2="825" y2="40" />
+          <line class="dg-accent-line" x1="40" y1="34" x2="40" y2="40" />
+          <line class="dg-accent-line" x1="825" y1="34" x2="825" y2="40" />
+          <text class="dg-arrow-label" x="432" y="30">chunk 1 → text[0:500]</text>
+
+          <!-- bar -->
+          <rect class="dg-card-bg" x="40" y="50" width="820" height="26" rx="4" />
+          <rect x="668" y="50" width="157" height="26" fill="var(--accent)" opacity="0.22" />
+
+          <line class="dg-tick" x1="40"  y1="50" x2="40"  y2="84" />
+          <line class="dg-tick" x1="668" y1="50" x2="668" y2="84" />
+          <line class="dg-tick" x1="825" y1="50" x2="825" y2="84" />
+          <line class="dg-tick" x1="860" y1="50" x2="860" y2="84" />
+          <text class="dg-tick-label" x="40"  y="96">0</text>
+          <text class="dg-tick-label" x="668" y="96">400</text>
+          <text class="dg-tick-label" x="825" y="96">500</text>
+          <text class="dg-tick-label" x="880" y="96">522 (end)</text>
+
+          <!-- chunk 2 bracket (below) -->
+          <line class="dg-accent-line" x1="668" y1="92" x2="860" y2="92" />
+          <line class="dg-accent-line" x1="668" y1="92" x2="668" y2="86" />
+          <line class="dg-accent-line" x1="860" y1="92" x2="860" y2="86" />
+          <text class="dg-arrow-label" x="764" y="108">chunk 2 → text[400:522] (page ends here)</text>
+
+          <text class="dg-code-ref" x="746" y="66" text-anchor="middle" fill="var(--accent)">overlap</text>
+
+          <!-- two real-text callouts -->
+          <rect class="dg-card-bg" x="20" y="140" width="430" height="90" rx="8" />
+          <text class="dg-eyebrow" x="34" y="160">CHUNK 1 ENDS MID-WORD</text>
+          <text class="dg-quote" x="34" y="182">"…image classification, and h"</text>
+          <text class="dg-sub" x="34" y="202">cut at position 500 — mid-word in "house"</text>
+
+          <rect class="dg-node-bg" x="470" y="140" width="450" height="90" rx="8" />
+          <text class="dg-eyebrow-accent" x="484" y="160">CHUNK 2 RECOVERS IT WHOLE</text>
+          <text class="dg-quote" x="484" y="182">"…and house price prediction."</text>
+          <text class="dg-sub" x="484" y="202">starts 100 chars earlier — the full word survives</text>
+
+          <rect class="dg-card-bg" x="20" y="248" width="900" height="60" rx="8" />
+          <text class="dg-sub" x="34" y="272">These same 100 characters — position 400 to 500 — appear in BOTH chunks:</text>
+          <text class="dg-quote" x="34" y="292">"responding correct output. Common examples include email spam detection, image classification, and h"</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> without overlap, chunk 2 would start at position 500 and "house price
+        prediction" would only ever exist split across two vectors, neither of which embeds to its real
+        meaning.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>One real question, three chunks — and a display-only shortcut</h2>
+    <p class="section-intro">
+      <code>"What is retrieval-augmented generation?"</code> retrieves 3 real chunks (up from Step 4's 2).
+      The top chunk takes two separate paths from here — one truncated for your terminal, one sent whole
+      to the model.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-ask" viewBox="0 0 1080 560" role="img"
+             aria-label="Question What is retrieval-augmented generation retrieves three chunks scored 0.827, 0.555, and 0.542. The top chunk splits into two paths: an 80-character truncated preview shown on screen, and the full untruncated chunk sent to the model. The model returns a grounded answer citing source 1 page 4.">
+          <defs>
+            <marker id="q3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+
+          <rect class="dg-card-bg" x="20" y="20" width="460" height="56" rx="8" />
+          <text class="dg-eyebrow" x="34" y="40">QUESTION</text>
+          <text class="dg-label" x="34" y="62">"What is retrieval-augmented generation?"</text>
+
+          <line class="dg-line" x1="250" y1="76" x2="250" y2="98" marker-end="url(#q3)" />
+          <text class="dg-code-ref" x="264" y="94">collection.query(n_results=3) — top_k=3</text>
+
+          <rect class="dg-node-bg" x="20" y="106" width="1040" height="46" rx="8" />
+          <text class="dg-eyebrow-accent" x="34" y="122">[0.827] SAMPLE.PDF · P4 — TOP HIT</text>
+          <text class="dg-quote" x="34" y="140">Retrieval-Augmented Generation Retrieval-Augmented Generation (RAG) combines a r…</text>
+
+          <rect class="dg-card-bg" x="20" y="160" width="1040" height="46" rx="8" />
+          <text class="dg-eyebrow" x="34" y="176">[0.555] SAMPLE.PDF · P2</text>
+          <text class="dg-quote" x="34" y="194">ecognition, and natural language processing. GPT and BERT are examples of deep l…</text>
+
+          <rect class="dg-card-bg" x="20" y="214" width="1040" height="46" rx="8" />
+          <text class="dg-eyebrow" x="34" y="230">[0.542] SAMPLE.PDF · P1</text>
+          <text class="dg-quote" x="34" y="248">Introduction to Machine Learning Machine learning is a branch of artificial inte…</text>
+
+          <line class="dg-line" x1="250" y1="260" x2="250" y2="280" />
+          <line class="dg-line" x1="250" y1="280" x2="130" y2="280" />
+          <line class="dg-line" x1="130" y1="280" x2="130" y2="298" marker-end="url(#q3)" />
+          <line class="dg-line" x1="250" y1="280" x2="700" y2="280" />
+          <line class="dg-line" x1="700" y1="280" x2="700" y2="298" marker-end="url(#q3)" />
+          <text class="dg-code-ref" x="470" y="274" text-anchor="middle">top chunk only, L179 vs L182 — same variable, two uses</text>
+
+          <rect class="dg-card-bg" x="20" y="306" width="480" height="120" rx="8" />
+          <text class="dg-eyebrow" x="34" y="326">ON SCREEN · chunk[:80] — L179</text>
+          <text class="dg-quote" x="34" y="348">"Retrieval-Augmented Generation</text>
+          <text class="dg-quote" x="34" y="364">Retrieval-Augmented Generation (RAG)</text>
+          <text class="dg-quote" x="34" y="380">combines a r"</text>
+          <text class="dg-sub" x="34" y="404">newlines replaced with spaces, cut at 80 chars</text>
+
+          <rect class="dg-node-bg" x="520" y="306" width="540" height="150" rx="8" />
+          <text class="dg-eyebrow-accent" x="534" y="326">TO THE MODEL · full chunk — L182</text>
+          <text class="dg-quote" x="534" y="346">"Retrieval-Augmented Generation</text>
+          <text class="dg-quote" x="534" y="360">Retrieval-Augmented Generation (RAG) combines a</text>
+          <text class="dg-quote" x="534" y="374">retrieval system with a language model. Instead of</text>
+          <text class="dg-quote" x="534" y="388">relying solely on the LLM's memorised knowledge,</text>
+          <text class="dg-quote" x="534" y="402">RAG fetches relevant documents at query time…"</text>
+          <text class="dg-sub" x="534" y="428">all 500 characters — never truncated for generation</text>
+
+          <line class="dg-line" x1="250" y1="426" x2="250" y2="450" />
+          <line class="dg-line" x1="700" y1="456" x2="700" y2="470" />
+          <line class="dg-line" x1="250" y1="450" x2="530" y2="450" marker-end="url(#q3)" />
+          <text class="dg-code-ref" x="390" y="444" text-anchor="middle">generate_answer()</text>
+
+          <rect class="dg-node-bg" x="20" y="478" width="1040" height="72" rx="8" />
+          <text class="dg-eyebrow-accent" x="34" y="498">ANSWER — real output</text>
+          <text class="dg-quote" x="34" y="518">"…RAG is a method that combines a retrieval system with a language model. It fetches relevant</text>
+          <text class="dg-quote" x="34" y="534">documents at query time and provides them as context…" — Source: [1] (sample.pdf page 4)</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 3 —</strong> what the human reads and what the model reasons over come from the same
+        variable but are never the same string — truncating for display can't accidentally starve the model
+        of context, because the cut happens after generation already ran.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="callout fade-in d3">
+    <span class="eyebrow">Worth noticing, not yet proving</span>
+    Pages 2 and 3 are each <em>shorter</em> than <code>chunk_size</code> (495 and 473 characters) — yet
+    both still produce 2 chunks, because <code>chunk_text()</code> never checks whether there's meaningful
+    new content left; it just keeps slicing while <code>start &lt; len(text)</code>. Their second chunk
+    ends up entirely contained inside their first — pure redundancy from a loop that doesn't know when to
+    stop early. And every chunk's id is just <code>str(i)</code>, a position counter that only stays unique
+    because this is one document, one in-memory run. <strong>Step 6 — Persistence + Multi-Doc</strong>
+    replaces that with a composite id, because a second document would start numbering at 0 again and collide.
+  </section>
+
+  <footer>
+    <span class="prev">← Step 4: Question to Answer</span>
+    <span>step5_real_docs.py · sample.pdf → 10 chunks · llama3.2:3b via local Ollama</span>
+    <span class="next">Next → Step 6: Persistence + Multi-Doc</span>
+  </footer>
+
+</div>
