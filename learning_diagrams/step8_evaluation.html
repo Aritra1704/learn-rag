@@ -1,0 +1,448 @@
+<meta charset="UTF-8">
+<title>Feelings to Numbers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F5F4;
+    --ink: #14201D;
+    --ink-soft: #4B5D58;
+    --ink-faint: #7C8B86;
+    --accent: #0E7C66;
+    --accent-soft: #DCEAE6;
+    --line: #C7D1CD;
+    --card-bg: #FDFEFD;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513;
+      --ink: #E8EFEC;
+      --ink-soft: #9FB3AD;
+      --ink-faint: #6C8079;
+      --accent: #3FD8B0;
+      --accent-soft: #16332B;
+      --line: #2A3934;
+      --card-bg: #161D1A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #101513;
+    --ink: #E8EFEC;
+    --ink-soft: #9FB3AD;
+    --ink-faint: #6C8079;
+    --accent: #3FD8B0;
+    --accent-soft: #16332B;
+    --line: #2A3934;
+    --card-bg: #161D1A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fade-in { animation: rise 0.6s ease-out both; }
+    .fade-in.d2 { animation-delay: 0.08s; }
+    .fade-in.d3 { animation-delay: 0.16s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  header { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .intro {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  .intro code, p code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-intro {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin-bottom: 1.25rem;
+  }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .diagram-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-bg);
+    padding: 1rem 0.5rem;
+  }
+
+  .diagram-scroll svg { display: block; height: auto; }
+
+  #fig-metrics { width: 100%; min-width: 980px; }
+  #fig-funnel  { width: 100%; min-width: 1000px; }
+  #fig-consist { width: 100%; min-width: 1000px; }
+
+  figcaption { font-size: 0.88rem; line-height: 1.55; color: var(--ink-soft); }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* SVG shared styles */
+  .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
+  .dg-node-bg { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .dg-dead    { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dg-flag    { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 3; }
+  .dg-line    { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; }
+  .dg-accent-line { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .dg-eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--ink-faint); font-weight: 600; }
+  .dg-eyebrow-accent { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; fill: var(--accent); font-weight: 600; }
+  .dg-label   { font-family: var(--font-mono); font-size: 12.5px; fill: var(--ink); font-weight: 600; }
+  .dg-sub     { font-family: var(--font-sans); font-size: 10.5px; fill: var(--ink-soft); }
+  .dg-quote   { font-family: var(--font-mono); font-size: 10px; fill: var(--ink); }
+  .dg-quote-accent { font-family: var(--font-mono); font-size: 10px; fill: var(--accent); font-weight: 600; }
+  .dg-op      { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); }
+  .dg-code-ref{ font-family: var(--font-mono); font-size: 9px; fill: var(--ink-faint); }
+  .dg-tick-label { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-faint); text-anchor: middle; }
+  .dg-score   { font-family: var(--font-mono); font-size: 14px; fill: var(--ink); font-weight: 600; text-anchor: middle; }
+  .dg-score-accent { font-family: var(--font-mono); font-size: 14px; fill: var(--accent); font-weight: 700; text-anchor: middle; }
+  .dg-col-head { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.05em; fill: var(--ink-soft); text-anchor: middle; font-weight: 600; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    padding: 1.1rem 1.4rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .callout .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  footer .next { font-family: var(--font-mono); color: var(--ink-soft); }
+  footer .prev { font-family: var(--font-mono); color: var(--ink-faint); }
+</style>
+
+<div class="page">
+
+  <header class="fade-in">
+    <span class="eyebrow">Step 8 of 9 · RAG Learning Guide</span>
+    <h1>Feelings to Numbers</h1>
+    <p class="intro">
+      <code>step8_evaluation.py</code> stops eyeballing printed chunks and scores everything: a
+      6-question hand-labeled golden set, three retrieval metrics (MRR, Hit@k, Precision@k), and two
+      LLM-judged answer metrics (Faithfulness, Relevance) — run across all four chunking strategies
+      from step 7. Every number below is real output from one run.
+    </p>
+  </header>
+
+  <section class="fade-in d2">
+    <h2>Three metrics, four strategies — one of them is lying to you</h2>
+    <p class="section-intro">
+      <code>evaluate_retrieval()</code> runs the same 6 golden questions against each strategy's index
+      with <code>k=3</code>. Hit@3 says every strategy is perfect. MRR and Precision@3 say otherwise.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-metrics" viewBox="0 0 1080 400" role="img"
+             aria-label="Four chunking strategies scored on three retrieval metrics from a real run. Fixed: MRR 0.72, Hit at 3 is 1.00, Precision at 3 is 0.33. Sentence: MRR 0.89, Hit at 3 is 1.00, Precision at 3 is 0.50. Paragraph: MRR 1.00, Hit at 3 is 1.00, Precision at 3 is 0.56, the best on both MRR and precision. Recursive: MRR 0.81, Hit at 3 is 1.00, Precision at 3 is 0.33. Hit at 3 is identical across all four strategies and tells you nothing; MRR and Precision at 3 are what actually separate them.">
+          <text class="dg-eyebrow" x="34" y="34">STRATEGY</text>
+          <text class="dg-col-head" x="450" y="34">MRR</text>
+          <text class="dg-col-head" x="690" y="30">HIT@3</text>
+          <text class="dg-col-head" x="690" y="42">(saturated)</text>
+          <text class="dg-col-head" x="940" y="34">PRECISION@3</text>
+          <line x1="20" y1="50" x2="1060" y2="50" stroke="var(--line)" stroke-width="1" />
+
+          <!-- row 1 -->
+          <text class="dg-label" x="34" y="90">1-fixed</text>
+          <text class="dg-sub" x="34" y="108">8 chunks</text>
+          <rect class="dg-card-bg" x="340" y="64" width="220" height="64" rx="8" />
+          <text class="dg-score" x="450" y="104">0.72</text>
+          <rect class="dg-dead" x="580" y="64" width="220" height="64" rx="8" />
+          <text class="dg-score" x="690" y="104">1.00</text>
+          <rect class="dg-card-bg" x="820" y="64" width="240" height="64" rx="8" />
+          <text class="dg-score" x="940" y="104">0.33</text>
+
+          <!-- row 2 -->
+          <text class="dg-label" x="34" y="162">2-sentence</text>
+          <text class="dg-sub" x="34" y="180">9 chunks</text>
+          <rect class="dg-card-bg" x="340" y="136" width="220" height="64" rx="8" />
+          <text class="dg-score" x="450" y="176">0.89</text>
+          <rect class="dg-dead" x="580" y="136" width="220" height="64" rx="8" />
+          <text class="dg-score" x="690" y="176">1.00</text>
+          <rect class="dg-card-bg" x="820" y="136" width="240" height="64" rx="8" />
+          <text class="dg-score" x="940" y="176">0.50</text>
+
+          <!-- row 3 -->
+          <text class="dg-label" x="34" y="234">3-paragraph</text>
+          <text class="dg-sub" x="34" y="252">10 chunks</text>
+          <rect class="dg-node-bg" x="340" y="208" width="220" height="64" rx="8" />
+          <text class="dg-score-accent" x="450" y="248">1.00</text>
+          <rect class="dg-dead" x="580" y="208" width="220" height="64" rx="8" />
+          <text class="dg-score" x="690" y="248">1.00</text>
+          <rect class="dg-node-bg" x="820" y="208" width="240" height="64" rx="8" />
+          <text class="dg-score-accent" x="940" y="248">0.56</text>
+
+          <!-- row 4 -->
+          <text class="dg-label" x="34" y="306">4-recursive</text>
+          <text class="dg-sub" x="34" y="324">10 chunks</text>
+          <rect class="dg-card-bg" x="340" y="280" width="220" height="64" rx="8" />
+          <text class="dg-score" x="450" y="320">0.81</text>
+          <rect class="dg-dead" x="580" y="280" width="220" height="64" rx="8" />
+          <text class="dg-score" x="690" y="320">1.00</text>
+          <rect class="dg-card-bg" x="820" y="280" width="240" height="64" rx="8" />
+          <text class="dg-score" x="940" y="320">0.33</text>
+
+          <rect class="dg-card-bg" x="20" y="360" width="1040" height="30" rx="6" />
+          <text class="dg-sub" x="34" y="380">dashed = Hit@3, identical for all four · solid accent = the real winner, on MRR and Precision@3 both</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> Hit@3 = 1.00 everywhere means every strategy finds the right chunk
+        somewhere in its top 3 — a binary pass that hides everything interesting. MRR shows paragraph
+        finding it at rank 1 every time (1.00) versus fixed averaging closer to rank 1.4 (0.72).
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d2">
+    <h2>Cheap filter first, expensive judge only on the winner</h2>
+    <p class="section-intro">
+      <code>reciprocal_rank()</code> is a substring check — free. Faithfulness and Relevance need a
+      second LLM call per question — 18 calls total. So only the strategy that already won on MRR
+      pays for that.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-funnel" viewBox="0 0 1080 460" role="img"
+             aria-label="Golden entry example: question What is retrieval-augmented generation, expected phrase Retrieval-Augmented Generation, found at rank 1, reciprocal rank 1.00. Four strategies with their real MRR scores feed into max by MRR, which selects 3-paragraph at MRR 1.00. Only that strategy proceeds to the LLM-as-judge pipeline: 6 generate_answer calls plus 12 judge calls, 18 total. Real Part B output: Faithfulness 0.42, Relevance 0.85.">
+          <rect class="dg-card-bg" x="20" y="20" width="1040" height="94" rx="10" />
+          <text class="dg-eyebrow" x="34" y="42">GOLDEN DATASET ENTRY — real example, L57-63</text>
+          <text class="dg-quote" x="34" y="64">question = "What is retrieval-augmented generation?"</text>
+          <text class="dg-quote-accent" x="34" y="82">expected_phrase = "Retrieval-Augmented Generation"</text>
+          <text class="dg-sub" x="34" y="102">reciprocal_rank(): phrase found at rank 1 → RR = 1/1 = 1.00 — real result, L109-114</text>
+
+          <text class="dg-eyebrow" x="34" y="140">FOUR STRATEGIES — real MRR from Fig. 1</text>
+
+          <rect class="dg-card-bg" x="20" y="150" width="240" height="50" rx="8" />
+          <text class="dg-quote" x="34" y="180" text-anchor="start">1-fixed  MRR=0.72</text>
+          <rect class="dg-card-bg" x="280" y="150" width="240" height="50" rx="8" />
+          <text class="dg-quote" x="294" y="180" text-anchor="start">2-sentence  MRR=0.89</text>
+          <rect class="dg-node-bg" x="540" y="150" width="240" height="50" rx="8" />
+          <text class="dg-quote-accent" x="554" y="180" text-anchor="start">3-paragraph  MRR=1.00</text>
+          <rect class="dg-card-bg" x="800" y="150" width="240" height="50" rx="8" />
+          <text class="dg-quote" x="814" y="180" text-anchor="start">4-recursive  MRR=0.81</text>
+
+          <line class="dg-line" x1="140" y1="200" x2="140" y2="216" />
+          <line class="dg-line" x1="400" y1="200" x2="400" y2="216" />
+          <line class="dg-line" x1="660" y1="200" x2="660" y2="216" />
+          <line class="dg-line" x1="920" y1="200" x2="920" y2="216" />
+          <line class="dg-line" x1="140" y1="216" x2="920" y2="216" />
+          <line class="dg-line" x1="530" y1="216" x2="530" y2="234" marker-end="url(#e1)" />
+
+          <rect class="dg-node-bg" x="380" y="242" width="300" height="50" rx="8" />
+          <text class="dg-eyebrow-accent" x="394" y="262">max(retrieval_results, key=MRR) — L294</text>
+          <text class="dg-quote-accent" x="394" y="280">winner: 3-paragraph</text>
+
+          <line class="dg-line" x1="530" y1="292" x2="530" y2="316" marker-end="url(#e1)" />
+
+          <rect class="dg-card-bg" x="260" y="324" width="560" height="66" rx="10" />
+          <text class="dg-eyebrow" x="274" y="346">LLM-AS-JUDGE — llama3.2:3b, evaluate_answers() L227-242</text>
+          <text class="dg-quote" x="274" y="366">6 × generate_answer() + 6 × judge_faithfulness() + 6 × judge_relevance()</text>
+          <text class="dg-sub" x="274" y="382">= 18 LLM calls — paid only once, on the retrieval winner</text>
+
+          <line class="dg-line" x1="440" y1="390" x2="440" y2="410" marker-end="url(#e1)" />
+          <line class="dg-line" x1="620" y1="390" x2="620" y2="410" marker-end="url(#e1)" />
+
+          <rect class="dg-card-bg" x="320" y="418" width="200" height="34" rx="8" />
+          <text class="dg-sub" x="334" y="440" text-anchor="start">FAITHFULNESS</text>
+
+          <rect class="dg-node-bg" x="560" y="418" width="200" height="34" rx="8" />
+          <text class="dg-sub" x="574" y="440" text-anchor="start">RELEVANCE</text>
+
+          <text class="dg-score" x="500" y="443">0.42</text>
+          <text class="dg-score-accent" x="740" y="443">0.85</text>
+
+          <defs>
+            <marker id="e1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> the strategy that already won on cheap retrieval metrics is the only
+        one that gets the expensive treatment — bad retrieval can't produce a good answer, so there's
+        little point judging the other three.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>The judge doesn't agree with itself</h2>
+    <p class="section-intro">
+      Part C re-runs generation and judging per question — a second, independent pass over the exact
+      same 6 questions, same strategy, same judge model that Part B already scored.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-consist" viewBox="0 0 1080 560" role="img"
+             aria-label="Part C per-question breakdown, real output, on the paragraph-aware strategy. Question 1, retrieval-augmented generation: Hit 1, RR 1.00, Faithfulness 0.00, flagged because the generated answer reads as fully grounded yet scored zero. Question 2, three types of machine learning: Hit 1, RR 1.00, Faithfulness 1.00. Question 3, neural networks and the human brain: Hit 1, RR 1.00, Faithfulness 0.60. Question 4, indexing algorithm: Hit 1, RR 1.00, Faithfulness 1.00. Question 5, supervised learning: Hit 1, RR 1.00, Faithfulness 1.00. Question 6, RAG and hallucination: Hit 1, RR 1.00, Faithfulness 1.00. Below, Part B's aggregate Faithfulness from its own independent pass was 0.42, while Part C's six individual scores average 0.77 — a 0.35 point gap between two runs of the identical pipeline on the identical questions.">
+          <text class="dg-col-head" x="250" y="18" text-anchor="start">QUESTION — Part C, per-question, L315-326</text>
+          <text class="dg-col-head" x="545" y="18">HIT</text>
+          <text class="dg-col-head" x="655" y="18">RR</text>
+          <text class="dg-col-head" x="890" y="18">FAITHFULNESS</text>
+          <line x1="20" y1="28" x2="1060" y2="28" stroke="var(--line)" stroke-width="1" />
+
+          <!-- Q1 flagged -->
+          <rect class="dg-flag" x="20" y="36" width="1040" height="72" rx="8" />
+          <text class="dg-quote-accent" x="34" y="58">"What is retrieval-augmented generation?"</text>
+          <text class="dg-score" x="545" y="58">1</text>
+          <text class="dg-score" x="655" y="58">1.00</text>
+          <text class="dg-score-accent" x="890" y="58">0.00</text>
+          <text class="dg-sub" x="34" y="78">answer: "RAG is a method that combines a retrieval system with a language model.</text>
+          <text class="dg-sub" x="34" y="94">It fetches relevant documents at query time..." — reads fully grounded, scored 0 anyway</text>
+
+          <!-- Q2 -->
+          <rect class="dg-card-bg" x="20" y="116" width="1040" height="48" rx="8" />
+          <text class="dg-quote" x="34" y="146">"What are the three types of machine learning?"</text>
+          <text class="dg-score" x="545" y="146">1</text>
+          <text class="dg-score" x="655" y="146">1.00</text>
+          <text class="dg-score" x="890" y="146">1.00</text>
+
+          <!-- Q3 -->
+          <rect class="dg-card-bg" x="20" y="172" width="1040" height="48" rx="8" />
+          <text class="dg-quote" x="34" y="202">"How do neural networks relate to the human brain?"</text>
+          <text class="dg-score" x="545" y="202">1</text>
+          <text class="dg-score" x="655" y="202">1.00</text>
+          <text class="dg-score" x="890" y="202">0.60</text>
+
+          <!-- Q4 -->
+          <rect class="dg-card-bg" x="20" y="228" width="1040" height="48" rx="8" />
+          <text class="dg-quote" x="34" y="258">"What indexing algorithm do vector databases use?"</text>
+          <text class="dg-score" x="545" y="258">1</text>
+          <text class="dg-score" x="655" y="258">1.00</text>
+          <text class="dg-score" x="890" y="258">1.00</text>
+
+          <!-- Q5 -->
+          <rect class="dg-card-bg" x="20" y="284" width="1040" height="48" rx="8" />
+          <text class="dg-quote" x="34" y="314">"How does a model learn in supervised learning?"</text>
+          <text class="dg-score" x="545" y="314">1</text>
+          <text class="dg-score" x="655" y="314">1.00</text>
+          <text class="dg-score" x="890" y="314">1.00</text>
+
+          <!-- Q6 -->
+          <rect class="dg-card-bg" x="20" y="340" width="1040" height="48" rx="8" />
+          <text class="dg-quote" x="34" y="370">"What does RAG do to reduce hallucination?"</text>
+          <text class="dg-score" x="545" y="370">1</text>
+          <text class="dg-score" x="655" y="370">1.00</text>
+          <text class="dg-score" x="890" y="370">1.00</text>
+
+          <!-- comparison panel -->
+          <rect class="dg-card-bg" x="20" y="410" width="500" height="130" rx="10" />
+          <text class="dg-eyebrow" x="34" y="432">PART B — evaluate_answers() aggregate, L303</text>
+          <text class="dg-sub" x="34" y="452">one generate + judge pass per question,</text>
+          <text class="dg-sub" x="34" y="468">averaged inside the function, L227-242</text>
+          <text class="dg-score" x="270" y="510">Faithfulness = 0.42</text>
+
+          <rect class="dg-node-bg" x="560" y="410" width="500" height="130" rx="10" />
+          <text class="dg-eyebrow-accent" x="574" y="432">PART C — this table, independent pass, L315-326</text>
+          <text class="dg-sub" x="574" y="452">separate generate + judge calls per question,</text>
+          <text class="dg-sub" x="574" y="468">averaged by hand: (0+1+0.6+1+1+1)/6</text>
+          <text class="dg-score-accent" x="810" y="510">= 0.77</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 3 —</strong> same 6 questions, same winning strategy, same judge model, two
+        independent passes through <code>generate_answer()</code> and <code>judge_faithfulness()</code>
+        — and a 0.35-point gap between them. Neither number is wrong; the judge just isn't
+        self-consistent.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="callout fade-in d3">
+    <span class="eyebrow">Worth noticing, not yet proving</span>
+    Question 1's answer reads as completely grounded — it restates exactly what the retrieved chunk
+    says — yet the judge scored it <code>Faithfulness = 0.00</code> in Part C while Part B's separate
+    pass, averaged across all six questions, landed at <code>0.42</code>. Both numbers came from the
+    <strong>same model</strong> (<code>llama3.2:3b</code>) generating the answer <em>and</em> judging
+    it — the exact blind spot the guide sheet names: a model's failure modes in generation can
+    correlate with its failure modes in judging its own output, and re-running the identical pipeline
+    doesn't even reproduce the same score twice. And <code>expected_phrase</code> is hand-tied to this
+    exact document's wording — edit <code>DOCUMENT</code> in step 7 without updating <code>GOLDEN</code>
+    here, and every retrieval metric silently reads as failure for no real reason.
+    <strong>Step 9 — Reranking</strong> adds a second scoring pass over retrieval itself — not to fix
+    the judge, but because bi-encoder cosine similarity, scored here as ground truth, has its own
+    blind spots worth measuring against something else.
+  </section>
+
+  <footer>
+    <span class="prev">← Step 7: Splits to a Winner</span>
+    <span>step8_evaluation.py · 6 golden Qs × 4 strategies · llama3.2:3b via local Ollama</span>
+    <span class="next">Next → Step 9: Reranking</span>
+  </footer>
+
+</div>
