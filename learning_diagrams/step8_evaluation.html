@@ -96,7 +96,9 @@
     max-width: 68ch;
   }
 
-  .intro code, p code {
+  .intro + .intro { margin-top: -0.6rem; }
+
+  .intro code, p code, li code {
     font-family: var(--font-mono);
     font-size: 0.9em;
     background: var(--accent-soft);
@@ -104,6 +106,30 @@
     border-radius: 4px;
     color: var(--ink);
   }
+
+  .two-questions {
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.1rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    max-width: 68ch;
+  }
+  .two-questions .q-label {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .two-questions p {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .two-questions p strong { color: var(--ink); }
 
   h2 {
     font-family: var(--font-mono);
@@ -119,6 +145,7 @@
     max-width: 68ch;
     margin-bottom: 1.25rem;
   }
+  .section-intro + .section-intro { margin-top: -0.75rem; }
 
   figure { margin: 0; display: flex; flex-direction: column; gap: 0.9rem; }
 
@@ -132,12 +159,60 @@
 
   .diagram-scroll svg { display: block; height: auto; }
 
-  #fig-metrics { width: 100%; min-width: 980px; }
+  #fig-example { width: 100%; min-width: 1000px; }
   #fig-funnel  { width: 100%; min-width: 1000px; }
+  #fig-metrics { width: 100%; min-width: 980px; }
   #fig-consist { width: 100%; min-width: 1000px; }
 
   figcaption { font-size: 0.88rem; line-height: 1.55; color: var(--ink-soft); }
   figcaption strong { color: var(--ink); font-weight: 600; }
+
+  /* metric definition cards */
+  .metric-defs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 720px) {
+    .metric-defs { grid-template-columns: 1fr; }
+  }
+  .metric-def {
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .metric-def.winner { border-color: var(--accent); }
+  .metric-def .term {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+  .metric-def .ask {
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .metric-def .formula {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 0.25rem 0.55rem;
+    border-radius: 4px;
+    width: fit-content;
+  }
+  .metric-def .example {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .metric-def .example strong { color: var(--ink); }
 
   /* SVG shared styles */
   .dg-card-bg { fill: var(--card-bg); stroke: var(--line); stroke-width: 1.5; }
@@ -191,18 +266,230 @@
     <span class="eyebrow">Step 8 of 9 · RAG Learning Guide</span>
     <h1>Feelings to Numbers</h1>
     <p class="intro">
-      <code>step8_evaluation.py</code> stops eyeballing printed chunks and scores everything: a
-      6-question hand-labeled golden set, three retrieval metrics (MRR, Hit@k, Precision@k), and two
-      LLM-judged answer metrics (Faithfulness, Relevance) — run across all four chunking strategies
-      from step 7. Every number below is real output from one run.
+      Every step so far, you judged quality by reading a handful of printed results and thinking
+      "yeah, that looks about right." That works when you're staring at 3 examples. It quietly falls
+      apart at any real scale — a pipeline can look perfect on the 3 things you happened to check and
+      still fail on 30% of everything else, and you'd never know, because you never looked at the
+      other 30%.
     </p>
+    <p class="intro">
+      <code>step8_evaluation.py</code> replaces that gut-check with numbers. It writes down 6 questions
+      and their correct answers <em>in advance</em> (the "golden dataset"), then runs every chunking
+      strategy from step 7 against that fixed test and scores each one — automatically, the same way,
+      every time. Every number on this page is real output from one actual run of that script.
+    </p>
+    <div class="two-questions">
+      <span class="q-label">TWO COMPLETELY SEPARATE THINGS GET MEASURED HERE</span>
+      <p><strong>1. Retrieval quality</strong> — did the search step find the right chunk of text at
+      all? This is fast to check and doesn't need an LLM: you already know what the right chunk should
+      contain, so it's just "is that text in there, yes or no, and how good was its position?"</p>
+      <p><strong>2. Answer quality</strong> — given whatever chunks were found, did the model's final
+      written answer actually make sense — is it accurate, and does it address the question? This
+      needs a second LLM call to judge, because "is this a good sentence" isn't a substring check.</p>
+      <p>A pipeline can ace #1 and still botch #2 (the right facts, badly written), or the reverse (a
+      fluent, confident answer built on the wrong chunk). Mixing the two up is the single most common
+      evaluation mistake — this step keeps them separate on purpose.</p>
+    </div>
   </header>
 
   <section class="fade-in d2">
-    <h2>Three metrics, four strategies — one of them is lying to you</h2>
+    <h2>What does "finding the right answer" actually mean?</h2>
     <p class="section-intro">
-      <code>evaluate_retrieval()</code> runs the same 6 golden questions against each strategy's index
-      with <code>k=3</code>. Hit@3 says every strategy is perfect. MRR and Precision@3 say otherwise.
+      For each of the 6 golden questions, the script also wrote down an <code>expected_phrase</code> —
+      a short, distinctive snippet of text that <em>must</em> appear in whichever chunk correctly
+      answers that question. That turns "did retrieval work?" into a fast, deterministic check: is
+      this exact substring present in the text that came back, yes or no. No eyeballing, no LLM call
+      needed for this part.
+    </p>
+    <p class="section-intro">
+      But "is it present" isn't the whole story — <em>where</em> it shows up in the results, and how
+      much irrelevant text it's buried among, both matter too. Here's one real question run against
+      two different chunking strategies from step 7, showing all three retrieval metrics on the exact
+      same successful search.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-example" viewBox="0 0 1080 590" role="img"
+             aria-label="Real question: How does a model learn in supervised learning, expected phrase minimising a loss function, top 3 results retrieved with k=3. On the fixed chunking strategy, rank 1 and rank 2 do not contain the phrase, rank 3 does, with cosine similarity score 0.686. On the paragraph-aware strategy, rank 1 and rank 2 both contain the phrase, rank 3 does not. For fixed: Hit at 3 equals 1, MRR contribution equals 1 divided by 3 equals 0.33, Precision at 3 equals 1 divided by 3 equals 0.33. For paragraph: Hit at 3 equals 1, MRR contribution equals 1 divided by 1 equals 1.00, Precision at 3 equals 2 divided by 3 equals 0.67. Both strategies technically found the answer, with identical Hit at 3 scores, but MRR and Precision at 3 tell very different stories about the same successful retrieval.">
+          <rect class="dg-card-bg" x="20" y="20" width="1040" height="66" rx="10" />
+          <text class="dg-eyebrow" x="34" y="42">REAL QUESTION FROM THE GOLDEN SET, L88-94</text>
+          <text class="dg-quote" x="34" y="60">question = "How does a model learn in supervised learning?"</text>
+          <text class="dg-quote-accent" x="34" y="78">expected_phrase = "minimising a loss function"</text>
+
+          <!-- LEFT: 1-fixed -->
+          <rect class="dg-card-bg" x="20" y="102" width="500" height="412" rx="10" />
+          <text class="dg-eyebrow" x="34" y="124">1-FIXED — the right chunk exists, but buried</text>
+          <line x1="20" y1="136" x2="520" y2="136" stroke="var(--line)" stroke-width="1" />
+
+          <rect class="dg-card-bg" x="34" y="144" width="472" height="62" rx="8" />
+          <text class="dg-eyebrow" x="48" y="164">[0.807] RANK 1 — no match</text>
+          <text class="dg-quote" x="48" y="182">"supervised learning, unsupervised learning, and</text>
+          <text class="dg-quote" x="48" y="198">reinforcement learning. In supervised learning..."</text>
+
+          <rect class="dg-card-bg" x="34" y="214" width="472" height="62" rx="8" />
+          <text class="dg-eyebrow" x="48" y="234">[0.731] RANK 2 — no match</text>
+          <text class="dg-quote" x="48" y="252">"Machine learning is a branch of artificial</text>
+          <text class="dg-quote" x="48" y="268">intelligence...unsupervised learn"</text>
+
+          <rect class="dg-node-bg" x="34" y="284" width="472" height="62" rx="8" />
+          <text class="dg-eyebrow-accent" x="48" y="304">[0.686] RANK 3 — CONTAINS THE PHRASE</text>
+          <text class="dg-quote" x="48" y="322">"...The model learns to map inputs to outputs by</text>
+          <text class="dg-quote" x="48" y="338">minimising a loss function during training."</text>
+
+          <rect class="dg-card-bg" x="34" y="360" width="472" height="140" rx="8" />
+          <text class="dg-eyebrow" x="48" y="382">WHAT THIS SCORES</text>
+          <text class="dg-sub" x="48" y="404">HIT@3 = 1</text>
+          <text class="dg-sub" x="48" y="420">found it — somewhere in the top 3</text>
+          <text class="dg-sub" x="48" y="444">MRR contribution = 1/3 = 0.33</text>
+          <text class="dg-sub" x="48" y="460">found at rank 3 — the reward shrinks with distance</text>
+          <text class="dg-sub" x="48" y="480">PRECISION@3 = 1/3 = 0.33</text>
+
+          <!-- RIGHT: 3-paragraph -->
+          <rect class="dg-node-bg" x="560" y="102" width="500" height="412" rx="10" />
+          <text class="dg-eyebrow-accent" x="574" y="124">3-PARAGRAPH — same answer, front and center</text>
+          <line x1="560" y1="136" x2="1060" y2="136" stroke="var(--accent)" stroke-width="1" opacity="0.4" />
+
+          <rect class="dg-card-bg" x="574" y="144" width="472" height="62" rx="8" />
+          <text class="dg-eyebrow-accent" x="588" y="164">[0.863] RANK 1 — CONTAINS THE PHRASE</text>
+          <text class="dg-quote" x="588" y="182">"In supervised learning, models are trained on</text>
+          <text class="dg-quote" x="588" y="198">labelled data...minimising a loss function..."</text>
+
+          <rect class="dg-card-bg" x="574" y="214" width="472" height="62" rx="8" />
+          <text class="dg-eyebrow-accent" x="588" y="234">[0.774] RANK 2 — CONTAINS THE PHRASE (near-duplicate)</text>
+          <text class="dg-quote" x="588" y="252">"The model learns to map inputs to outputs by</text>
+          <text class="dg-quote" x="588" y="268">minimising a loss function during training."</text>
+
+          <rect class="dg-card-bg" x="574" y="284" width="472" height="62" rx="8" />
+          <text class="dg-eyebrow" x="588" y="304">[0.726] RANK 3 — no match</text>
+          <text class="dg-quote" x="588" y="322">"Machine learning is a branch of artificial</text>
+          <text class="dg-quote" x="588" y="338">intelligence...reinforcement learning."</text>
+
+          <rect class="dg-card-bg" x="574" y="360" width="472" height="140" rx="8" />
+          <text class="dg-eyebrow-accent" x="588" y="382">WHAT THIS SCORES</text>
+          <text class="dg-sub" x="588" y="404">HIT@3 = 1</text>
+          <text class="dg-sub" x="588" y="420">found it — same as fixed, this metric can't tell them apart</text>
+          <text class="dg-sub" x="588" y="444">MRR contribution = 1/1 = 1.00</text>
+          <text class="dg-sub" x="588" y="460">found at rank 1 — no distance penalty at all</text>
+          <text class="dg-sub" x="588" y="480">PRECISION@3 = 2/3 = 0.67</text>
+
+          <rect class="dg-card-bg" x="20" y="524" width="1040" height="50" rx="8" />
+          <text class="dg-eyebrow" x="34" y="546">SAME HIT@3. VERY DIFFERENT EVERYTHING ELSE.</text>
+          <text class="dg-sub" x="34" y="564">both "found" the answer — Hit@3 = 1 for both — but MRR (0.33 vs 1.00) and Precision@3 (0.33 vs 0.67) show what that identical score was hiding.</text>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 1 —</strong> one real query, two real chunking strategies, all three metrics
+        computed by hand on the actual retrieved text — the definitions below map directly onto these
+        numbers.
+      </figcaption>
+    </figure>
+
+    <div class="metric-defs">
+      <div class="metric-def">
+        <span class="term">Hit@k</span>
+        <span class="ask">"Is the right answer anywhere in what I retrieved?"</span>
+        <span class="formula">1 if found in top k, else 0</span>
+        <span class="example">Binary — a yes/no smoke test. Both strategies above score <strong>1</strong>: the phrase showed up somewhere in their top 3. It doesn't care whether that was rank 1 or rank 3 — which is exactly why it can't separate a great retrieval from a barely-passing one.</span>
+      </div>
+      <div class="metric-def winner">
+        <span class="term">MRR</span>
+        <span class="ask">"How far down the list did I have to look?"</span>
+        <span class="formula">average of 1 / rank</span>
+        <span class="example">Rewards finding it <em>early</em>. Rank 1 scores a full 1.00; rank 2 scores 0.50; rank 3 scores 0.33 — a steep, deliberate penalty. Fixed's hit at rank 3 (0.33) and paragraph's hit at rank 1 (1.00) is where these two strategies actually stop looking the same.</span>
+      </div>
+      <div class="metric-def">
+        <span class="term">Precision@k</span>
+        <span class="ask">"Of what I handed back, how much was actually useful?"</span>
+        <span class="formula">relevant chunks retrieved / k</span>
+        <span class="example">Measures noise. Fixed handed back 1 useful chunk out of 3 (0.33) — two wasted slots the model still has to read past. Paragraph handed back 2 of 3 (0.67), because its near-duplicate chunk at rank 2 also happened to contain the phrase.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="fade-in d2">
+    <h2>The full procedure — what the script actually does, in order</h2>
+    <p class="section-intro">
+      With the three metrics defined, here's the actual sequence <code>step8_evaluation.py</code> runs
+      through, top to bottom. The key design choice: retrieval metrics are cheap (a substring check —
+      no LLM needed), but answer-quality judging is expensive (a second LLM call per question, on top
+      of generating the answer itself). So the script spends the expensive step only once, on whichever
+      strategy already won the cheap comparison.
+    </p>
+    <figure>
+      <div class="diagram-scroll">
+        <svg id="fig-funnel" viewBox="0 0 1080 460" role="img"
+             aria-label="Step by step: a hand-written golden set of 6 question and expected-phrase pairs is tested against all four chunking strategies from step 7, each producing a real MRR score — fixed 0.72, sentence 0.89, paragraph 1.00, recursive 0.81. The strategy with the highest MRR, paragraph-aware, is selected via max by MRR. Only that winner proceeds to the LLM-as-judge pipeline: 6 generate_answer calls plus 12 judge calls, 18 total. Real Part B output: Faithfulness 0.42, Relevance 0.85.">
+          <rect class="dg-card-bg" x="20" y="20" width="1040" height="70" rx="10" />
+          <text class="dg-eyebrow" x="34" y="42">STEP 1 — GOLDEN DATASET, hand-written once, L55-104</text>
+          <text class="dg-quote" x="34" y="62">6 × {question, expected_phrase, reference_answer} — the fixed, repeatable test</text>
+          <text class="dg-sub" x="34" y="80">reference_answer is written but never actually used by any function in this file</text>
+
+          <text class="dg-eyebrow" x="34" y="112">STEP 2 — run all 6 questions through EACH strategy's index, score cheaply</text>
+
+          <rect class="dg-card-bg" x="20" y="122" width="240" height="50" rx="8" />
+          <text class="dg-quote" x="34" y="152" text-anchor="start">1-fixed  MRR=0.72</text>
+          <rect class="dg-card-bg" x="280" y="122" width="240" height="50" rx="8" />
+          <text class="dg-quote" x="294" y="152" text-anchor="start">2-sentence  MRR=0.89</text>
+          <rect class="dg-node-bg" x="540" y="122" width="240" height="50" rx="8" />
+          <text class="dg-quote-accent" x="554" y="152" text-anchor="start">3-paragraph  MRR=1.00</text>
+          <rect class="dg-card-bg" x="800" y="122" width="240" height="50" rx="8" />
+          <text class="dg-quote" x="814" y="152" text-anchor="start">4-recursive  MRR=0.81</text>
+
+          <line class="dg-line" x1="140" y1="172" x2="140" y2="188" />
+          <line class="dg-line" x1="400" y1="172" x2="400" y2="188" />
+          <line class="dg-line" x1="660" y1="172" x2="660" y2="188" />
+          <line class="dg-line" x1="920" y1="172" x2="920" y2="188" />
+          <line class="dg-line" x1="140" y1="188" x2="920" y2="188" />
+          <line class="dg-line" x1="530" y1="188" x2="530" y2="206" marker-end="url(#e1)" />
+
+          <text class="dg-eyebrow" x="34" y="216">STEP 3 — pick the single best strategy, no LLM cost yet</text>
+          <rect class="dg-node-bg" x="380" y="222" width="300" height="50" rx="8" />
+          <text class="dg-eyebrow-accent" x="394" y="242">max(retrieval_results, key=MRR) — L294</text>
+          <text class="dg-quote-accent" x="394" y="260">winner: 3-paragraph</text>
+
+          <line class="dg-line" x1="530" y1="272" x2="530" y2="296" marker-end="url(#e1)" />
+
+          <text class="dg-eyebrow" x="34" y="298">STEP 4 — spend the expensive LLM-judge pass, ONLY on that winner</text>
+          <rect class="dg-card-bg" x="260" y="304" width="560" height="66" rx="10" />
+          <text class="dg-eyebrow" x="274" y="326">LLM-AS-JUDGE — llama3.2:3b, evaluate_answers() L227-242</text>
+          <text class="dg-quote" x="274" y="346">6 × generate_answer() + 6 × judge_faithfulness() + 6 × judge_relevance()</text>
+          <text class="dg-sub" x="274" y="362">= 18 LLM calls total — the other 3 strategies never pay this cost</text>
+
+          <line class="dg-line" x1="440" y1="370" x2="440" y2="390" marker-end="url(#e1)" />
+          <line class="dg-line" x1="620" y1="370" x2="620" y2="390" marker-end="url(#e1)" />
+
+          <text class="dg-eyebrow" x="34" y="404">STEP 5 — real output</text>
+          <rect class="dg-card-bg" x="320" y="398" width="200" height="34" rx="8" />
+          <text class="dg-sub" x="334" y="420" text-anchor="start">FAITHFULNESS</text>
+
+          <rect class="dg-node-bg" x="560" y="398" width="200" height="34" rx="8" />
+          <text class="dg-sub" x="574" y="420" text-anchor="start">RELEVANCE</text>
+
+          <text class="dg-score" x="500" y="423">0.42</text>
+          <text class="dg-score-accent" x="740" y="423">0.85</text>
+
+          <defs>
+            <marker id="e1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>
+        <strong>Fig. 2 —</strong> five steps, cheap-to-expensive: write the test once, score everyone
+        cheaply, pick a winner with no LLM cost at all, then spend the expensive judging pass only on
+        that winner. Bad retrieval can't produce a good answer, so judging the 3 losers would tell you
+        little.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="fade-in d3">
+    <h2>The real scoreboard — all four strategies, side by side</h2>
+    <p class="section-intro">
+      Now that each column has a concrete meaning, here's every strategy's actual score from step 2 of
+      the procedure above. Look at the Hit@3 column first — then look at what MRR and Precision@3 do
+      right next to it.
     </p>
     <figure>
       <div class="diagram-scroll">
@@ -260,91 +547,27 @@
         </svg>
       </div>
       <figcaption>
-        <strong>Fig. 1 —</strong> Hit@3 = 1.00 everywhere means every strategy finds the right chunk
-        somewhere in its top 3 — a binary pass that hides everything interesting. MRR shows paragraph
-        finding it at rank 1 every time (1.00) versus fixed averaging closer to rank 1.4 (0.72).
-      </figcaption>
-    </figure>
-  </section>
-
-  <section class="fade-in d2">
-    <h2>Cheap filter first, expensive judge only on the winner</h2>
-    <p class="section-intro">
-      <code>reciprocal_rank()</code> is a substring check — free. Faithfulness and Relevance need a
-      second LLM call per question — 18 calls total. So only the strategy that already won on MRR
-      pays for that.
-    </p>
-    <figure>
-      <div class="diagram-scroll">
-        <svg id="fig-funnel" viewBox="0 0 1080 460" role="img"
-             aria-label="Golden entry example: question What is retrieval-augmented generation, expected phrase Retrieval-Augmented Generation, found at rank 1, reciprocal rank 1.00. Four strategies with their real MRR scores feed into max by MRR, which selects 3-paragraph at MRR 1.00. Only that strategy proceeds to the LLM-as-judge pipeline: 6 generate_answer calls plus 12 judge calls, 18 total. Real Part B output: Faithfulness 0.42, Relevance 0.85.">
-          <rect class="dg-card-bg" x="20" y="20" width="1040" height="94" rx="10" />
-          <text class="dg-eyebrow" x="34" y="42">GOLDEN DATASET ENTRY — real example, L57-63</text>
-          <text class="dg-quote" x="34" y="64">question = "What is retrieval-augmented generation?"</text>
-          <text class="dg-quote-accent" x="34" y="82">expected_phrase = "Retrieval-Augmented Generation"</text>
-          <text class="dg-sub" x="34" y="102">reciprocal_rank(): phrase found at rank 1 → RR = 1/1 = 1.00 — real result, L109-114</text>
-
-          <text class="dg-eyebrow" x="34" y="140">FOUR STRATEGIES — real MRR from Fig. 1</text>
-
-          <rect class="dg-card-bg" x="20" y="150" width="240" height="50" rx="8" />
-          <text class="dg-quote" x="34" y="180" text-anchor="start">1-fixed  MRR=0.72</text>
-          <rect class="dg-card-bg" x="280" y="150" width="240" height="50" rx="8" />
-          <text class="dg-quote" x="294" y="180" text-anchor="start">2-sentence  MRR=0.89</text>
-          <rect class="dg-node-bg" x="540" y="150" width="240" height="50" rx="8" />
-          <text class="dg-quote-accent" x="554" y="180" text-anchor="start">3-paragraph  MRR=1.00</text>
-          <rect class="dg-card-bg" x="800" y="150" width="240" height="50" rx="8" />
-          <text class="dg-quote" x="814" y="180" text-anchor="start">4-recursive  MRR=0.81</text>
-
-          <line class="dg-line" x1="140" y1="200" x2="140" y2="216" />
-          <line class="dg-line" x1="400" y1="200" x2="400" y2="216" />
-          <line class="dg-line" x1="660" y1="200" x2="660" y2="216" />
-          <line class="dg-line" x1="920" y1="200" x2="920" y2="216" />
-          <line class="dg-line" x1="140" y1="216" x2="920" y2="216" />
-          <line class="dg-line" x1="530" y1="216" x2="530" y2="234" marker-end="url(#e1)" />
-
-          <rect class="dg-node-bg" x="380" y="242" width="300" height="50" rx="8" />
-          <text class="dg-eyebrow-accent" x="394" y="262">max(retrieval_results, key=MRR) — L294</text>
-          <text class="dg-quote-accent" x="394" y="280">winner: 3-paragraph</text>
-
-          <line class="dg-line" x1="530" y1="292" x2="530" y2="316" marker-end="url(#e1)" />
-
-          <rect class="dg-card-bg" x="260" y="324" width="560" height="66" rx="10" />
-          <text class="dg-eyebrow" x="274" y="346">LLM-AS-JUDGE — llama3.2:3b, evaluate_answers() L227-242</text>
-          <text class="dg-quote" x="274" y="366">6 × generate_answer() + 6 × judge_faithfulness() + 6 × judge_relevance()</text>
-          <text class="dg-sub" x="274" y="382">= 18 LLM calls — paid only once, on the retrieval winner</text>
-
-          <line class="dg-line" x1="440" y1="390" x2="440" y2="410" marker-end="url(#e1)" />
-          <line class="dg-line" x1="620" y1="390" x2="620" y2="410" marker-end="url(#e1)" />
-
-          <rect class="dg-card-bg" x="320" y="418" width="200" height="34" rx="8" />
-          <text class="dg-sub" x="334" y="440" text-anchor="start">FAITHFULNESS</text>
-
-          <rect class="dg-node-bg" x="560" y="418" width="200" height="34" rx="8" />
-          <text class="dg-sub" x="574" y="440" text-anchor="start">RELEVANCE</text>
-
-          <text class="dg-score" x="500" y="443">0.42</text>
-          <text class="dg-score-accent" x="740" y="443">0.85</text>
-
-          <defs>
-            <marker id="e1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)" />
-            </marker>
-          </defs>
-        </svg>
-      </div>
-      <figcaption>
-        <strong>Fig. 2 —</strong> the strategy that already won on cheap retrieval metrics is the only
-        one that gets the expensive treatment — bad retrieval can't produce a good answer, so there's
-        little point judging the other three.
+        <strong>Fig. 3 —</strong> Hit@3 = 1.00 for every single strategy — with only 6 questions and
+        k=3, this golden set isn't hard enough to make anything fail that test. MRR and Precision@3
+        are the columns doing the actual work: paragraph wins both, fixed and recursive tie for worst
+        on precision.
       </figcaption>
     </figure>
   </section>
 
   <section class="fade-in d3">
-    <h2>The judge doesn't agree with itself</h2>
+    <h2>The outcome — and how much to trust it</h2>
     <p class="section-intro">
-      Part C re-runs generation and judging per question — a second, independent pass over the exact
-      same 6 questions, same strategy, same judge model that Part B already scored.
+      Paragraph-aware chunking won the retrieval comparison clearly, so it's the strategy that went on
+      to the expensive answer-quality step: <code>Faithfulness = 0.42</code>,
+      <code>Relevance = 0.85</code> (Fig. 2). Relevance is straightforwardly good — the model's answers
+      address the question. Faithfulness looks concerning — under half — but before treating that
+      number as ground truth, it's worth checking whether the judge itself is reliable.
+    </p>
+    <p class="section-intro">
+      The script actually re-runs generation and judging a second time, independently, in its
+      per-question breakdown (Part C) — same 6 questions, same winning strategy, same judge model that
+      already produced the 0.42 above. Here's what that second, separate pass found.
     </p>
     <figure>
       <div class="diagram-scroll">
@@ -415,28 +638,35 @@
         </svg>
       </div>
       <figcaption>
-        <strong>Fig. 3 —</strong> same 6 questions, same winning strategy, same judge model, two
+        <strong>Fig. 4 —</strong> same 6 questions, same winning strategy, same judge model, two
         independent passes through <code>generate_answer()</code> and <code>judge_faithfulness()</code>
-        — and a 0.35-point gap between them. Neither number is wrong; the judge just isn't
-        self-consistent.
+        — and a 0.35-point gap between the two aggregate scores. Neither number is wrong; the judge
+        just isn't self-consistent from one run to the next.
       </figcaption>
     </figure>
+    <p class="section-intro">
+      So what should you actually take away from this step? Not "Faithfulness is 0.42, this pipeline
+      is bad" — and not "Faithfulness is 0.77, this pipeline is fine" either. The honest reading is:
+      retrieval quality (MRR, Hit@k, Precision@k) is measured with plain substring checks, so those
+      numbers are solid and reproducible — trust them. Answer quality, scored by a second LLM call, is
+      a genuinely useful signal but a noisy one — treat a single Faithfulness or Relevance number as a
+      rough estimate, not a verdict, and re-run it before making a real decision based on it.
+    </p>
   </section>
 
   <section class="callout fade-in d3">
     <span class="eyebrow">Worth noticing, not yet proving</span>
     Question 1's answer reads as completely grounded — it restates exactly what the retrieved chunk
-    says — yet the judge scored it <code>Faithfulness = 0.00</code> in Part C while Part B's separate
-    pass, averaged across all six questions, landed at <code>0.42</code>. Both numbers came from the
-    <strong>same model</strong> (<code>llama3.2:3b</code>) generating the answer <em>and</em> judging
-    it — the exact blind spot the guide sheet names: a model's failure modes in generation can
-    correlate with its failure modes in judging its own output, and re-running the identical pipeline
-    doesn't even reproduce the same score twice. And <code>expected_phrase</code> is hand-tied to this
-    exact document's wording — edit <code>DOCUMENT</code> in step 7 without updating <code>GOLDEN</code>
-    here, and every retrieval metric silently reads as failure for no real reason.
-    <strong>Step 9 — Reranking</strong> adds a second scoring pass over retrieval itself — not to fix
-    the judge, but because bi-encoder cosine similarity, scored here as ground truth, has its own
-    blind spots worth measuring against something else.
+    says — yet one judging pass scored it <code>Faithfulness = 0.00</code> while the other pass's
+    average landed at <code>0.42</code>. Both numbers came from the <strong>same model</strong>
+    (<code>llama3.2:3b</code>) generating the answer <em>and</em> judging it — a model's blind spots in
+    generation can correlate with its blind spots in judging its own output. And separately,
+    <code>expected_phrase</code> is hand-tied to this exact document's wording — edit
+    <code>DOCUMENT</code> in step 7 without updating <code>GOLDEN</code> here, and every retrieval
+    metric would silently read as failure for no real reason. <strong>Step 9 — Reranking</strong> adds
+    a second scoring pass over retrieval itself — not to fix the judge, but because bi-encoder cosine
+    similarity, treated here as ground truth, has its own blind spots worth measuring against
+    something else.
   </section>
 
   <footer>
